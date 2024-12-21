@@ -9,6 +9,7 @@ import { PlusCircle } from 'lucide-react'
 import axios from 'axios'
 import { Badge } from "@/components/ui/badge"
 import { X } from 'lucide-react'
+import { API_CONFIG } from '@/config/constants'
 
 export default function AddProductDialog({ categories, setarray_to_be_added }) {
     const [open, setOpen] = useState(false)
@@ -29,7 +30,7 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
             const reader = new FileReader();
             reader.onloadend = async () => {
                 try {
-                    const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+                    const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
                         'action': 'convert_to_webp',
                         'content': { 'image': reader.result }
                     });
@@ -78,7 +79,7 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
 
         const handleSend = async() => {
             try {
-                const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+                const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
                     'action': 'add_product',
                     'content': newProduct 
                 }, {

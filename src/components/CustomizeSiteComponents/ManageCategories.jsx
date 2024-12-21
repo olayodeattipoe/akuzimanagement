@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Edit, Trash2, ListPlus } from 'lucide-react'
 import axios from 'axios'
+import { API_CONFIG } from '@/config/constants'
 
 const FOOD_TYPES = [
   { value: 'MD', label: 'Main Dish' },
@@ -25,7 +26,7 @@ export default function ManageCategories({ categories, setCategories }) {
     }
 
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'add_category',
         'content': newCategory
       }, {
@@ -40,7 +41,7 @@ export default function ManageCategories({ categories, setCategories }) {
 
   const handleEditCategory = async (category) => {
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'edit_category',
         'content': category
       }, {
@@ -59,7 +60,8 @@ export default function ManageCategories({ categories, setCategories }) {
     }
 
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'delete_category',
         'content': category
       }, {

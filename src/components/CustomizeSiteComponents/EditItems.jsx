@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, Settings } from 'lucide-react'
 import { Switch } from "@/components/ui/switch"
 import AddItemDialog from './AddItemDialog'
 import EditItemDialog from './EditItemDialog'
@@ -11,6 +11,10 @@ import axios from 'axios'
 import ManageCustomOptions from './ManageCustomOptions'
 import ManageCategories from './ManageCategories'
 import ManageDishPairings from './ManageDishPairings'
+import { API_CONFIG } from '@/config/constants'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 export default function EditItems({ array_to_be_added, setarray_to_be_added, selectedCategory, setSelectedCategory }) {
   const [editingItem, setEditingItem] = useState(null)
@@ -35,7 +39,7 @@ export default function EditItems({ array_to_be_added, setarray_to_be_added, sel
     // Fetch categories
     const fetchCategories = async () => {
       try {
-        const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+        const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
           'action': 'get_category',
         }, {
           headers: {
@@ -61,7 +65,7 @@ export default function EditItems({ array_to_be_added, setarray_to_be_added, sel
       setarray_to_be_added(updatedArray);
 
       // Make the API call
-      await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'delete_product',
         'content': { 
           'selectedCategory': selectedCategory, 
@@ -80,37 +84,41 @@ export default function EditItems({ array_to_be_added, setarray_to_be_added, sel
   }
 
   useEffect(() => {
-    const sendPostRequest = async () => {
+    const fetchCategoryProducts = async () => {
       if (selectedCategory === '') {
-        console.log('No category selected')
-      } else {
-        try {
-          const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
-            'action': 'get_category_products',
-            'content': selectedCategory
-          }, {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
+        console.log('No category selected');
+        return;
+      }
 
-          setarray_to_be_added(result.data)
-        } catch (error) {
-          console.error('There was an error!', error);
-        }
+      try {
+        // Always fetch fresh data from the backend
+        const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+          'action': 'get_category_products',
+          'content': selectedCategory
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        // Directly set the array with the fresh data
+        setarray_to_be_added(result.data);
+      } catch (error) {
+        console.error('Error fetching category products:', error);
       }
     };
 
-    sendPostRequest();
-  }, [selectedCategory]);
+    fetchCategoryProducts();
+  }, [selectedCategory]); // Only depend on selectedCategory
 
   const handleAvailabilityToggle = async (item) => {
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+        const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'is_product_available',
         'content': { 
-           ...item, category: selectedCategory 
-        },
+          ...item, 
+          category: selectedCategory 
+        }
       }, {
         headers: {
           'Content-Type': 'application/json',
@@ -176,11 +184,11 @@ export default function EditItems({ array_to_be_added, setarray_to_be_added, sel
                 <TableCell>{product.description}</TableCell>
                 <TableCell>{product.base_price}</TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="ghost" onClick={() => handleEdit(product)}>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" onClick={() => handleDelete(product)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(product)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     <Switch

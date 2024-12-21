@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import axios from 'axios';
 import { Pencil, Loader2, Settings } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { API_CONFIG } from '@/config/constants'
 
 // PricingType constants
 const PricingType = {
@@ -45,7 +46,7 @@ export default function ManageCustomOptions() {
   useEffect(() => {
     const get_custom_header = async () => {
       try {
-        const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+        const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
           'action': 'get_custom_header',
           'content': '',
         }, {
@@ -72,7 +73,7 @@ export default function ManageCustomOptions() {
     const get_custom_choices = async () => {
       setIsLoading(true); // Start loading
       try {
-        const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+        const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
           'action': 'get_custom_food_option',
           'content': activeHeader,
         }, {
@@ -99,7 +100,7 @@ export default function ManageCustomOptions() {
     }
 
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'add_custom_header',
         'content': newHeader,
       }, {
@@ -111,7 +112,7 @@ export default function ManageCustomOptions() {
       // Update the local state with the new header
       setCustomHeaders(result.data);
       setNewHeader('');
-      setHeaderError('');
+      setHeaderError('');z
     } catch (error) {
       console.error('There was an error!', error);
     }
@@ -121,7 +122,7 @@ export default function ManageCustomOptions() {
   const handleAddCustomOption = async () => {
     const newOption = { ...newCustomOption, is_available: true, header: activeHeader };
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'add_custom_food_option',
         'content': newOption,
       }, {
@@ -139,7 +140,7 @@ export default function ManageCustomOptions() {
   // Update the toggleAvailability function
   const toggleAvailability = async (optionId, currentState) => {
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'toggle_custom_food_option_availability',
         'content': {
           id: optionId,
@@ -173,7 +174,7 @@ export default function ManageCustomOptions() {
   // Handle deleting a custom option
   const handleDelete = async (optionId) => {
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'delete_custom_food_option',
         'content': {
           id: optionId,
@@ -211,7 +212,7 @@ export default function ManageCustomOptions() {
   // Handle saving the edited custom option
   const handleSaveOptionEdit = async () => {
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'edit_custom_food_option',
         'content': editOptionData,
       }, {
@@ -249,7 +250,7 @@ export default function ManageCustomOptions() {
 
   const handleSaveHeaderEdit = async () => {
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'edit_custom_header',
         'content': editHeaderData,
       }, {

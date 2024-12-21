@@ -29,7 +29,7 @@ export default function ManageCustomOptions() {
   useEffect(() => {
     const get_custom_header = async () => {
       try {
-        const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+        const result = await axios.post('http://192.168.132.163:8000/mcc_primaryLogic/editables/', {
           'action': 'get_custom_header',
           'content': '',
         }, {

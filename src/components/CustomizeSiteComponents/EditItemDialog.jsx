@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Plus, Image as ImageIcon, DollarSign, Tag } from "lucide-react"
 import axios from 'axios'
+import { API_CONFIG } from '@/config/constants'
 
 export default function EditProductDialog({ product, open, setOpen, category_array, selectedCategory, setProductArray }) {
   const [editingProduct, setEditingProduct] = useState(product)
@@ -25,39 +26,10 @@ export default function EditProductDialog({ product, open, setOpen, category_arr
     console.log("waris this", product);
   }, [product]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    handleSend();
-    setOpen(false);
-  }
-
-  const handleCategoryChange = (value) => {
-    setEditingProduct({ ...editingProduct, category: parseInt(value) }); // Parse the value to an integer
-  }
-
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
-            'action': 'convert_to_webp',
-            'content': { 'image': reader.result }
-          });
-          setEditingProduct({ ...editingProduct, image_url: result.data.webp_image });
-        } catch (error) {
-          console.error('Error converting image:', error);
-          alert('Error processing image. Please try again.');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSend = async () => {
     try {
-      const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'edit_product',
         'content': editingProduct
       }, {
@@ -75,6 +47,30 @@ export default function EditProductDialog({ product, open, setOpen, category_arr
       console.error('There was an error!', error);
     }
   }
+
+  const handleCategoryChange = (value) => {
+    setEditingProduct({ ...editingProduct, category: parseInt(value) }); // Parse the value to an integer
+  }
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+            'action': 'convert_to_webp',
+            'content': { 'image': reader.result }
+          });
+          setEditingProduct({ ...editingProduct, image_url: result.data.webp_image });
+        } catch (error) {
+          console.error('Error converting image:', error);
+          alert('Error processing image. Please try again.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

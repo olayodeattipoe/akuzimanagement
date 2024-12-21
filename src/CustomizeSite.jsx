@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import EditItems from './components/CustomizeSiteComponents/EditItems'
 import axios from 'axios';
 import { useToast } from "@/hooks/use-toast"
+import { API_CONFIG } from '@/config/constants'
 
 
 export default function CustomizeSite({ setSelectedCategory, selectedCategory, array, setControl_array }) {
@@ -17,7 +18,7 @@ export default function CustomizeSite({ setSelectedCategory, selectedCategory, a
 
     const applychanges = async () => {
         try {
-            const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+            const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
                 'action': 'apply_changes',
             }, {
                 headers: {

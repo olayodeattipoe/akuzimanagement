@@ -2,6 +2,7 @@ import React, { useState, useEffect} from 'react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import MenuContainer from './MenuContainer';
 import axios from 'axios';
+import { API_CONFIG } from '@/config/constants'
 
 export default function NavMenu({array,setarray_to_be_added,selectedCategory,setSelectedCategory}){
     const[categories, setCategories] = useState([]);
@@ -13,7 +14,7 @@ export default function NavMenu({array,setarray_to_be_added,selectedCategory,set
         //pass
       } else {
         try {
-          const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+          const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
             'action': 'get_menu_contents',
             'content': { 'selectedCategory': selectedCategory_ }
           }, {
@@ -43,7 +44,7 @@ export default function NavMenu({array,setarray_to_be_added,selectedCategory,set
     useEffect(() => {
         const getCategory = async () => {
           try {
-            const result = await axios.post('http://192.168.56.1:8000/mcc_primaryLogic/editables/', {
+            const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
               'action': 'get_category',
             }, {
               headers: {
