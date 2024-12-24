@@ -202,6 +202,7 @@ export default function ManageDishPairings() {
   };
 
   const handlePackageSettingsUpdate = async (packageId, settings) => {
+    console.log('Sending settings to backend:', settings);
     try {
         const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
             'action': 'update_package_settings',
@@ -221,8 +222,15 @@ export default function ManageDishPairings() {
                         : item
                 )
             );
-        } else {
-            console.error('Failed to update package settings:', response.data);
+            
+            // Clear temp settings after successful update
+            const updatedItems = availableItems.map(item => {
+                if (item.id === packageId) {
+                    delete item.tempSettings;
+                }
+                return item;
+            });
+            setAvailableItems(updatedItems);
         }
     } catch (error) {
         console.error('Error updating package settings:', error);
@@ -285,6 +293,7 @@ export default function ManageDishPairings() {
       }, {
         headers: { 'Content-Type': 'application/json' }
       })
+      console.log('Choice settings response:', response.data)
       setChoiceSettings(response.data)
     } catch (error) {
       console.error('Error fetching choice settings:', error)
@@ -295,7 +304,7 @@ export default function ManageDishPairings() {
 
   const updateChoiceSettings = async (choiceId, settings) => {
     try {
-      await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'update_product_option_settings',
         'content': {
           product_id: selectedPairing.productId,
@@ -306,6 +315,21 @@ export default function ManageDishPairings() {
       }, {
         headers: { 'Content-Type': 'application/json' }
       })
+      
+      if (response.data.status === 'success') {
+        // Update local state with the response data
+        setChoiceSettings(prevSettings => 
+          prevSettings.map(setting => 
+            setting.choice_id === choiceId
+              ? { 
+                  ...setting, 
+                  ...response.data.data,  // Use the nested data object
+                  tempSettings: undefined  // Clear temp settings after successful update
+                }
+              : setting
+          )
+        );
+      }
       
       // Refresh settings after update
       await fetchChoiceSettings(selectedPairing.productId, selectedPairing.optionId)
@@ -375,7 +399,12 @@ export default function ManageDishPairings() {
     return (
       <div className="group p-4 rounded-md border">
         <div className="flex items-center justify-between mb-3">
-          <span className="font-medium">{item.name}</span>
+          <div>
+            <span className="font-medium">{item.name}</span>
+            <span className="text-xs text-muted-foreground ml-2">
+              ({item.pricing_type})
+            </span>
+          </div>
           {activeTab === "package" && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -387,72 +416,82 @@ export default function ManageDishPairings() {
                 <div className="p-4 space-y-4">
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm">Package Settings</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {item.pricing_type === 'FIX' 
+                        ? 'Configure fixed quantity and locking settings'
+                        : 'Configure locking settings'
+                      }
+                    </p>
                     <Separator />
                   </div>
                   
                   <div className="space-y-3">
                     <div className="grid gap-2">
-                      <Label>
-                        {item.pricing_type === 'INC' ? 'Starting Quantity' : 'Fixed Price'}
-                      </Label>
-                      <Input 
-                        type="number"
-                        value={item.if_package_price_lock ?? ''}
-                        onChange={(e) => {
-                          const value = e.target.value === '' ? null : parseInt(e.target.value);
-                          // Update local state immediately
-                          setAvailableItems(prevItems => 
-                            prevItems.map(prevItem => 
-                              prevItem.id === item.id 
-                                ? { ...prevItem, if_package_price_lock: value }
-                                : prevItem
-                            )
-                          );
-                          // Store temporarily without making API call
-                          item.tempSettings = {
-                            ...item.tempSettings,
-                            if_package_price_lock: value
-                          };
-                        }}
-                        disabled={item.package_lock}
-                        className="w-full"
-                        min="0"
-                        step="1"
-                      />
+                      {item.pricing_type === 'FIX' && (
+                        <>
+                          <Label>Quantity</Label>
+                          <Input 
+                            type="number"
+                            value={item.tempSettings?.if_package_price_lock ?? item.if_package_price_lock ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? '' : parseInt(e.target.value);
+                              item.tempSettings = {
+                                ...item.tempSettings || {},
+                                if_package_price_lock: value,
+                                package_lock: item.tempSettings?.package_lock ?? item.package_lock ?? false
+                              };
+                              setAvailableItems([...availableItems]);
+                            }}
+                            className="w-full"
+                            min="0"
+                            step="1"
+                            placeholder="Enter quantity"
+                          />
+                        </>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <Label className="font-normal">Lock Package Settings</Label>
+                      <div className="space-y-1">
+                        <Label className="font-normal">Lock Package Settings</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Prevent changes to package configuration
+                        </p>
+                      </div>
                       <Switch 
-                        checked={item.package_lock || false}
+                        checked={item.tempSettings?.package_lock ?? item.package_lock ?? false}
                         onCheckedChange={(checked) => {
-                          // Update local state immediately
-                          setAvailableItems(prevItems => 
-                            prevItems.map(prevItem => 
-                              prevItem.id === item.id 
-                                ? { ...prevItem, package_lock: checked }
-                                : prevItem
-                            )
-                          );
-                          // Store temporarily without making API call
                           item.tempSettings = {
-                            ...item.tempSettings,
-                            package_lock: checked
+                            ...item.tempSettings || {},
+                            package_lock: checked,
+                            if_package_price_lock: item.tempSettings?.if_package_price_lock ?? item.if_package_price_lock ?? ''
                           };
+                          setAvailableItems([...availableItems]);
                         }}
                       />
                     </div>
 
                     <Button 
                       className="w-full mt-2" 
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         if (item.tempSettings) {
+                          if (item.pricing_type === 'FIX' && item.tempSettings.if_package_price_lock === '') {
+                            alert('Quantity cannot be empty for fixed pricing packages');
+                            return;
+                          }
+                          
                           handlePackageSettingsUpdate(item.id, item.tempSettings);
+                          
+                          item.if_package_price_lock = item.tempSettings.if_package_price_lock;
+                          item.package_lock = item.tempSettings.package_lock;
+                          
                           delete item.tempSettings;
+                          setAvailableItems([...availableItems]);
                         }
                       }}
                     >
-                      Done
+                      Save Settings
                     </Button>
                   </div>
                 </div>
@@ -511,46 +550,88 @@ export default function ManageDishPairings() {
               return (
                 <Card key={choice.choice_id}>
                   <CardContent className="p-4">
-                    <h4 className="font-medium mb-2">{choice.choice_name}</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Label htmlFor={`price-lock-${choice.choice_id}`}>Price Lock</Label>
-                        <Input
-                          id={`price-lock-${choice.choice_id}`}
-                          type="number"
-                          value={choice.if_package_price_lock || ''}
-                          onChange={(e) => {
-                            const value = e.target.value ? parseInt(e.target.value) : null;
-                            // Update local state immediately
-                            setChoiceSettings(prevSettings => 
-                              prevSettings.map(setting => 
-                                setting.choice_id === choice.choice_id
-                                  ? { ...setting, if_package_price_lock: value }
-                                  : setting
-                              )
-                            );
-                            // Store in tempSettings
-                            choice.tempSettings.if_package_price_lock = value;
-                          }}
-                        />
-                      </div>
+                    <div className="space-y-4">
+                      {/* Header section */}
                       <div className="flex items-center justify-between">
-                        <Label>Package Lock</Label>
-                        <Switch
-                          checked={choice.package_lock || false}
-                          onCheckedChange={(checked) => {
-                            // Update local state immediately
-                            setChoiceSettings(prevSettings => 
-                              prevSettings.map(setting => 
-                                setting.choice_id === choice.choice_id
-                                  ? { ...setting, package_lock: checked }
-                                  : setting
-                              )
-                            );
-                            // Store in tempSettings
-                            choice.tempSettings.package_lock = checked;
-                          }}
-                        />
+                        <div>
+                          <h4 className="font-medium">{choice.choice_name}</h4>
+                          <span className="text-xs text-muted-foreground">
+                            Pricing Type: {choice.pricing_type}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Settings section */}
+                      <div className="space-y-4">
+                        {choice.pricing_type === 'FIX' && (
+                          <div className="space-y-2">
+                            <Label>Fixed Quantity</Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={choice.if_package_price_lock || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value ? parseInt(e.target.value) : null;
+                                  setChoiceSettings(prevSettings => 
+                                    prevSettings.map(setting => 
+                                      setting.choice_id === choice.choice_id
+                                        ? { 
+                                            ...setting, 
+                                            if_package_price_lock: value,
+                                            tempSettings: {
+                                              ...setting.tempSettings,
+                                              if_package_price_lock: value,
+                                              package_lock: setting.tempSettings?.package_lock ?? setting.package_lock
+                                            }
+                                          }
+                                        : setting
+                                    )
+                                  );
+                                }}
+                                placeholder="Enter quantity"
+                                className="max-w-[150px]"
+                                min="0"
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                items
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Set the fixed quantity for this option
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <Label>Lock Settings</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Prevent changes to this option's configuration
+                            </p>
+                          </div>
+                          <Switch
+                            checked={choice.package_lock || false}
+                            onCheckedChange={(checked) => {
+                              setChoiceSettings(prevSettings => 
+                                prevSettings.map(setting => 
+                                  setting.choice_id === choice.choice_id
+                                    ? { 
+                                        ...setting, 
+                                        package_lock: checked,
+                                        tempSettings: {
+                                          ...setting.tempSettings,
+                                          package_lock: checked,
+                                          if_package_price_lock: setting.tempSettings?.if_package_price_lock ?? setting.if_package_price_lock
+                                        }
+                                      }
+                                    : setting
+                                )
+                              );
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -569,7 +650,7 @@ export default function ManageDishPairings() {
                 });
                 setIsSettingsOpen(false);
               }}>
-                Done
+                Save Changes
               </Button>
             </DialogFooter>
           </div>

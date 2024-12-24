@@ -17,60 +17,47 @@ import { API_CONFIG } from '@/config/constants'
 export default function EditProductDialog({ product, open, setOpen, category_array, selectedCategory, setProductArray }) {
   const [editingProduct, setEditingProduct] = useState(product)
   const [activeTab, setActiveTab] = useState("basic")
+  const [imageUrl, setImageUrl] = useState(product?.image_url || "")
 
   // Ensure the product is loaded properly when the component mounts
   useEffect(() => {
     if (product) {
       setEditingProduct(product);
+      setImageUrl(product.image_url || "");
     }
-    console.log("waris this", product);
   }, [product]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const productToSubmit = {
+        ...editingProduct,
+        image_url: imageUrl || "",
+      };
+
+      console.log('Sending to server:', productToSubmit);
+
       const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'edit_product',
-        'content': editingProduct
+        'content': productToSubmit
       }, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      // Clear and set new data
-      setProductArray([]);  // Clear first
-      setProductArray(result.data);  // Set new data
+      console.log('Server response:', result.data);
+      setProductArray(result.data);
       setOpen(false);
 
     } catch (error) {
-      console.error('There was an error!', error);
+      console.error('Error:', error);
+      alert('Failed to save changes');
     }
   }
 
   const handleCategoryChange = (value) => {
     setEditingProduct({ ...editingProduct, category: parseInt(value) }); // Parse the value to an integer
   }
-
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
-            'action': 'convert_to_webp',
-            'content': { 'image': reader.result }
-          });
-          setEditingProduct({ ...editingProduct, image_url: result.data.webp_image });
-        } catch (error) {
-          console.error('Error converting image:', error);
-          alert('Error processing image. Please try again.');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -191,34 +178,42 @@ export default function EditProductDialog({ product, open, setOpen, category_arr
               <Card>
                 <CardHeader>
                   <CardTitle>Product Image</CardTitle>
-                  <CardDescription>Upload or update the product's image.</CardDescription>
+                  <CardDescription>Add an image URL for your product.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="picture">Upload Picture</Label>
+                    <Label htmlFor="image_url">Image URL</Label>
                     <div className="flex items-center space-x-2">
-                      <Input id="picture" type="file" onChange={handleImageChange} accept="image/*" className="flex-grow" />
-                      <Button type="button" size="icon" onClick={() => document.getElementById('picture').click()}>
-                        <ImageIcon className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {editingProduct.image_url && (
-                    <div className="mt-4">
-                      <img 
-                        src={editingProduct.image_url} 
-                        alt="Current product" 
-                        className="max-w-[300px] rounded-md"
+                      <Input
+                        id="image_url"
+                        type="url"
+                        placeholder="Paste your image URL here or leave empty for none"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="flex-grow"
                       />
                     </div>
-                  )}
+                    {imageUrl && (
+                      <div className="mt-4">
+                        <img 
+                          src={imageUrl} 
+                          alt="Product preview" 
+                          className="max-w-[300px] rounded-md"
+                          onError={() => {
+                            setImageUrl("");
+                            alert("Invalid image URL. Please try another one.");
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 mt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" onClick={handleSubmit}>Save Changes</Button>
           </div>
         </form>
       </DialogContent>

@@ -2,10 +2,9 @@ import React, { useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import EditItems from './components/CustomizeSiteComponents/EditItems'
-import axios from 'axios';
+import axios from 'axios'
 import { useToast } from "@/hooks/use-toast"
 import { API_CONFIG } from '@/config/constants'
-
 
 export default function CustomizeSite({ setSelectedCategory, selectedCategory, array, setControl_array }) {
     const { toast } = useToast()
@@ -14,7 +13,6 @@ export default function CustomizeSite({ setSelectedCategory, selectedCategory, a
             console.log('No category selected')
         }
     }, [])
-
 
     const applychanges = async () => {
         try {
@@ -40,13 +38,25 @@ export default function CustomizeSite({ setSelectedCategory, selectedCategory, a
         }
     };
 
-
-
     return (
-        <div>
-            <Button onClick={() => { applychanges(); }} className="mb-4 flex" variant="destructive">Apply Changes</Button>
-            <EditItems selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} array_to_be_added={array} setarray_to_be_added={setControl_array} />
+        <div className="flex flex-col h-full w-full">
+            <div className="w-full h-full">
+                <Button 
+                    onClick={applychanges} 
+                    className="mb-4" 
+                    variant="destructive"
+                >
+                    Apply Changes
+                </Button>
+                <div className="h-[calc(100%-3rem)]">
+                    <EditItems 
+                        selectedCategory={selectedCategory} 
+                        setSelectedCategory={setSelectedCategory} 
+                        array_to_be_added={array} 
+                        setarray_to_be_added={setControl_array} 
+                    />
+                </div>
+            </div>
         </div>
-
     )
 }

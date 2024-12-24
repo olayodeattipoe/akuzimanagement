@@ -6,6 +6,8 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/servers" element={<Dashboard />} />
+        <Route path="/analytics" element={<Dashboard />} />
       </Routes>
     </Router>
   )
