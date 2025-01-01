@@ -434,7 +434,7 @@ export default function ManageDishPairings() {
                             type="number"
                             value={item.tempSettings?.if_package_price_lock ?? item.if_package_price_lock ?? ''}
                             onChange={(e) => {
-                              const value = e.target.value === '' ? '' : parseInt(e.target.value);
+                              const value = e.target.value ? parseInt(e.target.value) : null;
                               item.tempSettings = {
                                 ...item.tempSettings || {},
                                 if_package_price_lock: value,
