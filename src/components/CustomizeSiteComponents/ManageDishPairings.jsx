@@ -202,38 +202,42 @@ export default function ManageDishPairings() {
   };
 
   const handlePackageSettingsUpdate = async (packageId, settings) => {
-    console.log('Sending settings to backend:', settings);
+    console.log('Initial settings:', settings);
+    console.log('Package ID:', packageId);
+    
     try {
+        // Format settings and log
+        const formattedSettings = {
+            package_id: packageId,
+            if_package_price_lock: settings.if_package_price_lock === '' ? null : 
+                                 settings.if_package_price_lock,
+            package_lock: Boolean(settings.package_lock)
+        };
+
+        console.log('Formatted settings being sent:', formattedSettings);
+
         const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
             'action': 'update_package_settings',
-            'content': {
-                package_id: packageId,
-                if_package_price_lock: settings.if_package_price_lock,
-                package_lock: settings.package_lock
-            }
+            'content': formattedSettings
         });
 
+        console.log('Server response:', response.data);
+
         if (response.data.status === 'success') {
-            // Update local state to reflect changes
-            setAvailableItems(prevItems => 
-                prevItems.map(item => 
+            console.log('Updating local state with:', response.data.data);
+            setAvailableItems(prevItems => {
+                const newItems = prevItems.map(item => 
                     item.id === packageId 
-                        ? { ...item, ...settings }
+                        ? { ...item, ...response.data.data }
                         : item
-                )
-            );
-            
-            // Clear temp settings after successful update
-            const updatedItems = availableItems.map(item => {
-                if (item.id === packageId) {
-                    delete item.tempSettings;
-                }
-                return item;
+                );
+                console.log('New items state:', newItems);
+                return newItems;
             });
-            setAvailableItems(updatedItems);
         }
     } catch (error) {
         console.error('Error updating package settings:', error);
+        console.error('Error response:', error.response?.data);
     }
   };
 
