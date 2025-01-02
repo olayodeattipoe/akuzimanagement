@@ -11,82 +11,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function AnalyticsPage() {
+export default function MonitoringDashboard() {
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
     totalOrders: 0,
-    totalSales: 0,
+    pendingOrders: 0,
+    completedOrders: 0
   });
-  const [timeFilter, setTimeFilter] = useState('all');
-
-  const calculateOrderTotal = (containers) => {
-    return Object.entries(containers).reduce((grandTotal, [_, items]) => {
-      const basketTotal = items.reduce((total, item) => {
-        let customizationTotal = 0;
-
-        if (item.customizations) {
-          Object.entries(item.customizations).forEach(([_, optionChoices]) => {
-            Object.entries(optionChoices).forEach(([_, choice]) => {
-              if (item.food_type === 'PK' && choice.pricing_type === 'INC') {
-                customizationTotal += choice.price;
-              } else if (choice.quantity > 0) {
-                customizationTotal += choice.price;
-              }
-            });
-          });
-        }
-
-        if (item.food_type === 'SA') {
-          return total + (item.base_price * item.quantity);
-        } else if (item.food_type === 'MD' || item.food_type === 'PK') {
-          if (item.pricing_type === 'INC') {
-            return total + item.main_dish_price + customizationTotal;
-          } else {
-            return total + (item.base_price * (item.quantity || 1)) + customizationTotal;
-          }
-        }
-        return total;
-      }, 0);
-      
-      return grandTotal + basketTotal;
-    }, 0);
-  };
+  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'today', 'week', 'month'
 
   useEffect(() => {
-    fetchAnalyticsData();
-  }, [timeFilter]);
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 60000);
+    return () => clearInterval(interval);
+  }, [timeFilter]); // Re-fetch when filter changes
 
-  const fetchAnalyticsData = async () => {
+  const fetchDashboardData = async () => {
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
-        action: 'get_analytics',
-        content: { timeFilter }
+        'action': 'get_dashboard_data',
+        'content': { timeFilter }
       });
 
-      const orders = response.data;
-      setOrders(orders);
-
-      // Calculate total sales
-      const totalSales = orders.reduce((sum, order) => {
-        return sum + calculateOrderTotal(order.containers);
-      }, 0);
-
-      setStats({
-        totalOrders: orders.length,
-        totalSales: totalSales,
-      });
+      if (response.data) {
+        setOrders(response.data.orders);
+        setStats(response.data.stats);
+      }
     } catch (error) {
-      console.error('Error fetching analytics data:', error);
+      console.error('Error fetching dashboard data:', error);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Sales Analytics</h1>
+        <h1 className="text-2xl font-bold">Orders Dashboard</h1>
         <Select value={timeFilter} onValueChange={setTimeFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time period" />
+            <SelectValue placeholder="Select time range" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Time</SelectItem>
@@ -96,38 +58,51 @@ export default function AnalyticsPage() {
           </SelectContent>
         </Select>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <Badge variant="success">GHS {stats.totalSales.toFixed(2)}</Badge>
+            <CardTitle className="text-sm font-medium">Unprocessed Orders</CardTitle>
+            <Badge variant="warning" className="ml-2">{stats.pendingOrders}</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">GHS {stats.totalSales.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              {timeFilter === 'all' ? 'All time sales' :
-               timeFilter === 'today' ? 'Today\'s sales' :
-               timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
-            </p>
+            <div className="text-2xl font-bold">{stats.pendingOrders}</div>
+            <p className="text-xs text-muted-foreground">Awaiting processing</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed Orders</CardTitle>
+            <Badge variant="success" className="ml-2">{stats.completedOrders}</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.completedOrders}</div>
+            <p className="text-xs text-muted-foreground">Successfully completed</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge>{stats.totalOrders}</Badge>
+            <Badge className="ml-2">{stats.totalOrders}</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">Number of orders processed</p>
+            <p className="text-xs text-muted-foreground">
+              {timeFilter === 'all' ? 'All time total' :
+               timeFilter === 'today' ? 'Today\'s total' :
+               timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+            </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Sales History</CardTitle>
+          <CardTitle>Orders</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative overflow-x-auto rounded-md border">
@@ -136,8 +111,9 @@ export default function AnalyticsPage() {
                 <tr>
                   <th className="px-6 py-3">Order ID</th>
                   <th className="px-6 py-3">Customer</th>
-                  <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3">Date & Time</th>
+                  <th className="px-6 py-3">Handled By</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,11 +122,18 @@ export default function AnalyticsPage() {
                     <td className="px-6 py-4 font-medium">{order.uuid}</td>
                     <td className="px-6 py-4">{order.customer__name || 'Guest'}</td>
                     <td className="px-6 py-4">
-                      GHS {calculateOrderTotal(order.containers).toFixed(2)}
+                      <Badge variant={
+                        order.status === 'completed' ? 'success' :
+                        order.status === 'unprocessed' ? 'warning' :
+                        'default'
+                      }>
+                        {order.status}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4">
                       {new Date(order.timestamp).toLocaleString()}
                     </td>
+                    <td className="px-6 py-4">{order.staff__username || 'Unassigned'}</td>
                   </tr>
                 ))}
               </tbody>

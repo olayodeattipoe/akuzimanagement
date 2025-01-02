@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import CustomizeSite from './CustomizeSite'
 import ServersPage from './components/Servers/ServersPage'
 import AnalyticsPage from './components/Analytics/AnalyticsPage'
+import MonitoringDashboard from './components/Monitoring/MonitoringDashboard'
 
 export function NewDashboard() {
   const location = useLocation()
@@ -16,27 +17,31 @@ export function NewDashboard() {
         return <ServersPage />
       case '/analytics':
         return <AnalyticsPage />
+      case '/monitoring':
+        return <MonitoringDashboard />
       default:
         return (
-          <div className="max-w-4xl mx-auto w-full">
-            <CustomizeSite 
-              selectedCategory={selectedCategory} 
-              setSelectedCategory={setSelectedCategory} 
-              array={control_array} 
-              setControl_array={setControl_array} 
-            />
-          </div>
+          <CustomizeSite 
+            selectedCategory={selectedCategory} 
+            setSelectedCategory={setSelectedCategory} 
+            array={control_array} 
+            setControl_array={setControl_array} 
+          />
         )
     }
   }
   
   return (
-    <div className="min-h-screen">
-      <header className="flex h-16 items-center border-b px-4">
+    <div className="min-h-screen flex flex-col">
+      <header className="flex h-16 items-center border-b px-4 bg-background">
         <AppSidebar />
       </header>
-      <main className="container mx-auto p-4">
-        {getPageContent()}
+      <main className="flex-1 w-full overflow-auto">
+        <div className="container mx-auto h-full flex items-start justify-center p-6">
+          <div className="w-full">
+            {getPageContent()}
+          </div>
+        </div>
       </main>
     </div>
   )
