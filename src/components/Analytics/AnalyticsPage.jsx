@@ -15,7 +15,7 @@ export default function AnalyticsPage() {
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
     totalOrders: 0,
-    totalSales: 0,
+    totalSales: 0.00
   });
   const [timeFilter, setTimeFilter] = useState('all');
 
@@ -63,20 +63,26 @@ export default function AnalyticsPage() {
         content: { timeFilter }
       });
 
-      const orders = response.data;
+      const orders = response.data || [];
       setOrders(orders);
 
-      // Calculate total sales
+      // Calculate total sales with type safety
       const totalSales = orders.reduce((sum, order) => {
-        return sum + calculateOrderTotal(order.containers);
+        const orderTotal = calculateOrderTotal(order.containers) || 0;
+        return sum + orderTotal;
       }, 0);
 
       setStats({
-        totalOrders: orders.length,
-        totalSales: totalSales,
+        totalOrders: orders.length || 0,
+        totalSales: Number(totalSales) || 0  // Ensure it's a number
       });
     } catch (error) {
       console.error('Error fetching analytics data:', error);
+      // Set default values on error
+      setStats({
+        totalOrders: 0,
+        totalSales: 0
+      });
     }
   };
 
