@@ -28,27 +28,31 @@ export default function AnalyticsPage() {
           Object.entries(item.customizations).forEach(([_, optionChoices]) => {
             Object.entries(optionChoices).forEach(([_, choice]) => {
               if (item.food_type === 'PK' && choice.pricing_type === 'INC') {
-                customizationTotal += choice.price;
+                customizationTotal += Number(choice.price) || 0;
               } else if (choice.quantity > 0) {
-                customizationTotal += choice.price;
+                customizationTotal += Number(choice.price) || 0;
               }
             });
           });
         }
 
+        const quantity = Number(item.quantity) || 1;
+        const basePrice = Number(item.base_price) || 0;
+        const mainDishPrice = Number(item.main_dish_price) || 0;
+
         if (item.food_type === 'SA') {
-          return total + (item.base_price * item.quantity);
+          return total + (basePrice * quantity);
         } else if (item.food_type === 'MD' || item.food_type === 'PK') {
           if (item.pricing_type === 'INC') {
-            return total + item.main_dish_price + customizationTotal;
+            return total + mainDishPrice + customizationTotal;
           } else {
-            return total + (item.base_price * (item.quantity || 1)) + customizationTotal;
+            return total + (basePrice * quantity) + customizationTotal;
           }
         }
         return total;
       }, 0);
       
-      return grandTotal + basketTotal;
+      return Number(grandTotal) + Number(basketTotal);
     }, 0);
   };
 
@@ -63,32 +67,21 @@ export default function AnalyticsPage() {
         content: { timeFilter }
       });
 
-      console.log("Analytics Response:", response.data); // Debug the response
-
       const orders = Array.isArray(response.data) ? response.data : [];
       setOrders(orders);
 
-      // Calculate total sales with additional type checking
+      // Calculate total sales
       const totalSales = orders.reduce((sum, order) => {
         if (!order.containers || typeof order.containers !== 'object') {
-          console.warn('Invalid container data for order:', order);
           return sum;
         }
-        
-        try {
-          const orderTotal = calculateOrderTotal(order.containers);
-          return sum + (typeof orderTotal === 'number' ? orderTotal : 0);
-        } catch (err) {
-          console.error('Error calculating order total:', err);
-          return sum;
-        }
+        const orderTotal = calculateOrderTotal(order.containers);
+        return Number(sum) + Number(orderTotal);
       }, 0);
-
-      console.log("Calculated total sales:", totalSales); // Debug the calculation
 
       setStats({
         totalOrders: orders.length,
-        totalSales: parseFloat(totalSales) || 0
+        totalSales: Number(totalSales)
       });
     } catch (error) {
       console.error('Error fetching analytics data:', error);
