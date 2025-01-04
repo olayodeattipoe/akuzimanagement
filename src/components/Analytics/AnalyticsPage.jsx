@@ -63,22 +63,35 @@ export default function AnalyticsPage() {
         content: { timeFilter }
       });
 
-      const orders = response.data || [];
+      console.log("Analytics Response:", response.data); // Debug the response
+
+      const orders = Array.isArray(response.data) ? response.data : [];
       setOrders(orders);
 
-      // Calculate total sales with type safety
+      // Calculate total sales with additional type checking
       const totalSales = orders.reduce((sum, order) => {
-        const orderTotal = calculateOrderTotal(order.containers) || 0;
-        return sum + orderTotal;
+        if (!order.containers || typeof order.containers !== 'object') {
+          console.warn('Invalid container data for order:', order);
+          return sum;
+        }
+        
+        try {
+          const orderTotal = calculateOrderTotal(order.containers);
+          return sum + (typeof orderTotal === 'number' ? orderTotal : 0);
+        } catch (err) {
+          console.error('Error calculating order total:', err);
+          return sum;
+        }
       }, 0);
 
+      console.log("Calculated total sales:", totalSales); // Debug the calculation
+
       setStats({
-        totalOrders: orders.length || 0,
-        totalSales: Number(totalSales) || 0  // Ensure it's a number
+        totalOrders: orders.length,
+        totalSales: parseFloat(totalSales) || 0
       });
     } catch (error) {
       console.error('Error fetching analytics data:', error);
-      // Set default values on error
       setStats({
         totalOrders: 0,
         totalSales: 0
@@ -107,7 +120,9 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <Badge variant="success">GHS {stats.totalSales.toFixed(2)}</Badge>
+            <Badge variant="success">
+              GHS {typeof stats.totalSales === 'number' ? stats.totalSales.toFixed(2) : '0.00'}
+            </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">GHS {stats.totalSales.toFixed(2)}</div>
