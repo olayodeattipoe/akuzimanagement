@@ -75,16 +75,20 @@ export default function ServersPage() {
   };
 
   const handleDeleteServer = async (serverId) => {
-    if (window.confirm('Are you sure you want to delete this server?')) {
-      try {
-        await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
-          action: 'delete_server',
-          content: { id: serverId }
-        });
-        fetchServers();
-      } catch (error) {
-        console.error('Error deleting server:', error);
+    try {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+        'action': 'delete_server',
+        'content': { id: serverId }
+      });
+
+      if (response.data.status === 'success') {
+        // Update local state by filtering out the deleted server
+        setServers(prevServers => prevServers.filter(server => server.id !== serverId));
+      } else {
+        console.error('Failed to delete server');
       }
+    } catch (error) {
+      console.error('Error deleting server:', error);
     }
   };
 
