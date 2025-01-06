@@ -121,67 +121,69 @@ export default function ManageCategories({ categories, setCategories }) {
             <Button onClick={handleAddCategory} className="mt-6">Add Category</Button>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Food Type</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell>
-                    {editingCategory?.id === category.id ? (
-                      <Input
-                        value={editingCategory.name}
-                        onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                      />
-                    ) : category.name}
-                  </TableCell>
-                  <TableCell>
-                    {editingCategory?.id === category.id ? (
-                      <Select 
-                        value={editingCategory.food_type}
-                        onValueChange={(value) => setEditingCategory({ ...editingCategory, food_type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FOOD_TYPES.map(type => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : FOOD_TYPES.find(t => t.value === category.food_type)?.label}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      {editingCategory?.id === category.id ? (
-                        <>
-                          <Button onClick={() => handleEditCategory(editingCategory)}>Save</Button>
-                          <Button variant="outline" onClick={() => setEditingCategory(null)}>Cancel</Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button variant="ghost" onClick={() => setEditingCategory(category)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" onClick={() => handleDeleteCategory(category)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          <div className="scrollable-container">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Food Type</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell>
+                      {editingCategory?.id === category.id ? (
+                        <Input
+                          value={editingCategory.name}
+                          onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                        />
+                      ) : category.name}
+                    </TableCell>
+                    <TableCell>
+                      {editingCategory?.id === category.id ? (
+                        <Select 
+                          value={editingCategory.food_type}
+                          onValueChange={(value) => setEditingCategory({ ...editingCategory, food_type: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FOOD_TYPES.map(type => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : FOOD_TYPES.find(t => t.value === category.food_type)?.label}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        {editingCategory?.id === category.id ? (
+                          <>
+                            <Button onClick={() => handleEditCategory(editingCategory)}>Save</Button>
+                            <Button variant="outline" onClick={() => setEditingCategory(null)}>Cancel</Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="ghost" onClick={() => setEditingCategory(category)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" onClick={() => handleDeleteCategory(category)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
