@@ -377,52 +377,54 @@ export default function ManageCustomOptions() {
                   <Button onClick={handleAddCustomOption} className="mt-6">Add Option</Button>
                 </div>
 
-                {/* Render custom options for this header */}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Price Adjustment</TableHead>
-                      <TableHead>Pricing Type</TableHead>
-                      <TableHead>Available</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {customOptionData.map(option => (
-                      <TableRow key={option.id}>
-                        <TableCell>{option.choice_name}</TableCell>
-                        <TableCell>{option.price}</TableCell>
-                        <TableCell>{option.pricing_type === PricingType.FIXED ? 'Fixed' : 'Incremental'}</TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Switch
-                            checked={option.is_available}
-                            onCheckedChange={() => toggleAvailability(option.id, option.is_available)}
-                          />
-                        </TableCell>
-                        <TableCell className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCustomOptionEdit(option);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(option.id);
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </TableCell>
+                {/* Make this div scrollable */}
+                <div className="scrollable-container">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price Adjustment</TableHead>
+                        <TableHead>Pricing Type</TableHead>
+                        <TableHead>Available</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {customOptionData.map(option => (
+                        <TableRow key={option.id}>
+                          <TableCell>{option.choice_name}</TableCell>
+                          <TableCell>{option.price}</TableCell>
+                          <TableCell>{option.pricing_type === PricingType.FIXED ? 'Fixed' : 'Incremental'}</TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Switch
+                              checked={option.is_available}
+                              onCheckedChange={() => toggleAvailability(option.id, option.is_available)}
+                            />
+                          </TableCell>
+                          <TableCell className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCustomOptionEdit(option);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(option.id);
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
           ))

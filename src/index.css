@@ -111,3 +111,8 @@
 .animate-progress {
   animation: progress 1s ease-in-out infinite;
 }
+
+.scrollable-container {
+  max-height: 400px; /* Adjust the height as needed */
+  overflow-y: auto;
+}
