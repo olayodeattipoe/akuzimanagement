@@ -354,24 +354,22 @@ export default function ManageDishPairings() {
         <div className="flex items-center justify-between mb-3">
           <span className="font-medium">{item.name}</span>
           <div className="flex items-center gap-2">
-            {activeTab === "package" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedPairing({
-                    productId: item.id,
-                    optionId: selectedHeader.id,
-                    productName: item.name,
-                    headerName: selectedHeader.name
-                  })
-                  fetchChoiceSettings(item.id, selectedHeader.id)
-                  setIsSettingsOpen(true)
-                }}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedPairing({
+                  productId: item.id,
+                  optionId: selectedHeader.id,
+                  productName: item.name,
+                  headerName: selectedHeader.name
+                })
+                fetchChoiceSettings(item.id, selectedHeader.id)
+                setIsSettingsOpen(true)
+              }}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -409,99 +407,101 @@ export default function ManageDishPairings() {
               ({item.pricing_type})
             </span>
           </div>
-          {activeTab === "package" && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Wrench className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <div className="p-4 space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Package Settings</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {item.pricing_type === 'FIX' 
-                        ? 'Configure fixed quantity and locking settings'
-                        : 'Configure locking settings'
-                      }
-                    </p>
-                    <Separator />
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="grid gap-2">
-                      {item.pricing_type === 'FIX' && (
-                        <>
-                          <Label>Quantity</Label>
-                          <Input 
-                            type="number"
-                            value={item.tempSettings?.if_package_price_lock ?? item.if_package_price_lock ?? ''}
-                            onChange={(e) => {
-                              const value = e.target.value ? parseInt(e.target.value) : null;
-                              item.tempSettings = {
-                                ...item.tempSettings || {},
-                                if_package_price_lock: value,
-                                package_lock: item.tempSettings?.package_lock ?? item.package_lock ?? false
-                              };
-                              setAvailableItems([...availableItems]);
-                            }}
-                            className="w-full"
-                            min="0"
-                            step="1"
-                            placeholder="Enter quantity"
-                          />
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <Label className="font-normal">Lock Package Settings</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Prevent changes to package configuration
-                        </p>
-                      </div>
-                      <Switch 
-                        checked={item.tempSettings?.package_lock ?? item.package_lock ?? false}
-                        onCheckedChange={(checked) => {
-                          item.tempSettings = {
-                            ...item.tempSettings || {},
-                            package_lock: checked,
-                            if_package_price_lock: item.tempSettings?.if_package_price_lock ?? item.if_package_price_lock ?? ''
-                          };
-                          setAvailableItems([...availableItems]);
-                        }}
-                      />
-                    </div>
-
-                    <Button 
-                      className="w-full mt-2" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (item.tempSettings) {
-                          if (item.pricing_type === 'FIX' && item.tempSettings.if_package_price_lock === '') {
-                            alert('Quantity cannot be empty for fixed pricing packages');
-                            return;
-                          }
-                          
-                          handlePackageSettingsUpdate(item.id, item.tempSettings);
-                          
-                          item.if_package_price_lock = item.tempSettings.if_package_price_lock;
-                          item.package_lock = item.tempSettings.package_lock;
-                          
-                          delete item.tempSettings;
-                          setAvailableItems([...availableItems]);
-                        }
-                      }}
-                    >
-                      Save Settings
-                    </Button>
-                  </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Wrench className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <div className="p-4 space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">
+                    {activeTab === "maindish" ? "Dish Settings" : "Package Settings"}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {item.pricing_type === 'FIX' 
+                      ? 'Configure fixed quantity and locking settings'
+                      : 'Configure locking settings'
+                    }
+                  </p>
+                  <Separator />
                 </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                
+                <div className="space-y-3">
+                  <div className="grid gap-2">
+                    {item.pricing_type === 'FIX' && (
+                      <>
+                        <Label>Quantity</Label>
+                        <Input 
+                          type="number"
+                          value={item.tempSettings?.if_package_price_lock ?? item.if_package_price_lock ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value) : null;
+                            item.tempSettings = {
+                              ...item.tempSettings || {},
+                              if_package_price_lock: value,
+                              package_lock: item.tempSettings?.package_lock ?? item.package_lock ?? false
+                            };
+                            setAvailableItems([...availableItems]);
+                          }}
+                          className="w-full"
+                          min="0"
+                          step="1"
+                          placeholder="Enter quantity"
+                        />
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="font-normal">
+                        Lock {activeTab === "maindish" ? "Dish" : "Package"} Settings
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Prevent changes to {activeTab === "maindish" ? "dish" : "package"} configuration
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={item.tempSettings?.package_lock ?? item.package_lock ?? false}
+                      onCheckedChange={(checked) => {
+                        item.tempSettings = {
+                          ...item.tempSettings || {},
+                          package_lock: checked,
+                          if_package_price_lock: item.tempSettings?.if_package_price_lock ?? item.if_package_price_lock ?? ''
+                        };
+                        setAvailableItems([...availableItems]);
+                      }}
+                    />
+                  </div>
+
+                  <Button 
+                    className="w-full mt-2" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (item.tempSettings) {
+                        if (item.pricing_type === 'FIX' && item.tempSettings.if_package_price_lock === '') {
+                          alert('Quantity cannot be empty for fixed pricing items');
+                          return;
+                        }
+                        
+                        handlePackageSettingsUpdate(item.id, item.tempSettings);
+                        
+                        item.if_package_price_lock = item.tempSettings.if_package_price_lock;
+                        item.package_lock = item.tempSettings.package_lock;
+                        
+                        delete item.tempSettings;
+                        setAvailableItems([...availableItems]);
+                      }
+                    }}
+                  >
+                    Save Settings
+                  </Button>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="text-sm text-muted-foreground">
           {item.description}
