@@ -270,6 +270,33 @@ export default function ManageCustomOptions() {
       console.error('There was an error updating the header!', error);
     }
   };
+
+  const handleDeleteHeader = async (headerId) => {
+    if (!confirm('Are you sure you want to delete this header? This will delete all associated options.')) {
+      return;
+    }
+
+    try {
+      const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+        'action': 'delete_custom_header',
+        'content': {
+          id: headerId
+        }
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      setCustomHeaders(result.data);
+      setIsEditHeaderDialogOpen(false);
+      if (activeHeader === headerId) {
+        setActiveHeader(null);
+      }
+    } catch (error) {
+      console.error('Error deleting header:', error);
+    }
+  };
   
   return (
     <Dialog>
@@ -477,21 +504,30 @@ export default function ManageCustomOptions() {
               </div>
             </div>
 
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => {
-                setIsEditHeaderDialogOpen(false);
-                setHeaderError('');
-                setEditHeaderData({
-                  name: headerToEdit?.name || '',
-                  option_type: headerToEdit?.option_type || 'dropdown',
-                  is_required: headerToEdit?.is_required || false
-                });
-              }}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={handleSaveHeaderEdit}>
-                Save Changes
-              </AlertDialogAction>
+            <AlertDialogFooter className="flex justify-between">
+              <Button 
+                variant="destructive" 
+                onClick={() => handleDeleteHeader(headerToEdit?.id)}
+                className="mr-auto"
+              >
+                Delete Header
+              </Button>
+              <div className="flex gap-2">
+                <AlertDialogCancel onClick={() => {
+                  setIsEditHeaderDialogOpen(false);
+                  setHeaderError('');
+                  setEditHeaderData({
+                    name: headerToEdit?.name || '',
+                    option_type: headerToEdit?.option_type || 'dropdown',
+                    is_required: headerToEdit?.is_required || false
+                  });
+                }}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handleSaveHeaderEdit}>
+                  Save Changes
+                </AlertDialogAction>
+              </div>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
