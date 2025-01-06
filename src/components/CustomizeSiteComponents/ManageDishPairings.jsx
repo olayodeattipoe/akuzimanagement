@@ -354,22 +354,24 @@ export default function ManageDishPairings() {
         <div className="flex items-center justify-between mb-3">
           <span className="font-medium">{item.name}</span>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedPairing({
-                  productId: item.id,
-                  optionId: selectedHeader.id,
-                  productName: item.name,
-                  headerName: selectedHeader.name
-                })
-                fetchChoiceSettings(item.id, selectedHeader.id)
-                setIsSettingsOpen(true)
-              }}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+            {activeTab === "package" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedPairing({
+                    productId: item.id,
+                    optionId: selectedHeader.id,
+                    productName: item.name,
+                    headerName: selectedHeader.name
+                  })
+                  fetchChoiceSettings(item.id, selectedHeader.id)
+                  setIsSettingsOpen(true)
+                }}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
