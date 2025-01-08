@@ -10,6 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function AnalyticsPage() {
   const [orders, setOrders] = useState([]);
@@ -145,30 +153,34 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <div className="relative overflow-x-auto rounded-md border">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs uppercase bg-muted">
-                <tr>
-                  <th className="px-6 py-3">Order ID</th>
-                  <th className="px-6 py-3">Customer</th>
-                  <th className="px-6 py-3">Amount</th>
-                  <th className="px-6 py-3">Date & Time</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Payment Method</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {orders.map(order => (
-                  <tr key={order.uuid} className="border-b bg-card hover:bg-muted/50">
-                    <td className="px-6 py-4 font-medium">{order.uuid}</td>
-                    <td className="px-6 py-4">{order.customer__name || 'Guest'}</td>
-                    <td className="px-6 py-4">
+                  <TableRow key={order.uuid} className="border-b bg-card hover:bg-muted/50">
+                    <TableCell className="px-6 py-4 font-medium">{order.uuid}</TableCell>
+                    <TableCell className="px-6 py-4">{order.customer__name || 'Guest'}</TableCell>
+                    <TableCell className="px-6 py-4">
                       GHS {calculateOrderTotal(order.containers).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
+                      {order.payment_method}
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
                       {new Date(order.timestamp).toLocaleString()}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
