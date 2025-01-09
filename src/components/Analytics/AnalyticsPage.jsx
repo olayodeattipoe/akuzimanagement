@@ -25,7 +25,8 @@ export default function AnalyticsPage() {
     totalOrders: 0,
     totalSales: 0.00
   });
-  const [timeFilter, setTimeFilter] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('today');
+  const [paymentFilter, setPaymentFilter] = useState('all');
 
   const calculateOrderTotal = (containers) => {
     return Object.entries(containers).reduce((grandTotal, [_, items]) => {
@@ -66,7 +67,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, [timeFilter]);
+  }, [timeFilter, paymentFilter]);
 
   const fetchAnalyticsData = async () => {
     try {
@@ -75,11 +76,17 @@ export default function AnalyticsPage() {
         content: { timeFilter }
       });
 
-      const orders = Array.isArray(response.data) ? response.data : [];
-      setOrders(orders);
+      const allOrders = Array.isArray(response.data) ? response.data : [];
+      
+      // Filter orders based on payment method
+      const filteredOrders = paymentFilter === 'all' 
+        ? allOrders 
+        : allOrders.filter(order => order.payment_method?.toLowerCase() === paymentFilter);
 
-      // Calculate total sales
-      const totalSales = orders.reduce((sum, order) => {
+      setOrders(filteredOrders);
+
+      // Calculate total sales with filtered orders
+      const totalSales = filteredOrders.reduce((sum, order) => {
         if (!order.containers || typeof order.containers !== 'object') {
           return sum;
         }
@@ -88,7 +95,7 @@ export default function AnalyticsPage() {
       }, 0);
 
       setStats({
-        totalOrders: orders.length,
+        totalOrders: filteredOrders.length,
         totalSales: Number(totalSales)
       });
     } catch (error) {
@@ -104,17 +111,29 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Sales Analytics</h1>
-        <Select value={timeFilter} onValueChange={setTimeFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time period" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">Last 7 Days</SelectItem>
-            <SelectItem value="month">Last 30 Days</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-4">
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Payment Method" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payments</SelectItem>
+              <SelectItem value="cash">Cash Only</SelectItem>
+              <SelectItem value="momo">Mobile Money Only</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">Last 7 Days</SelectItem>
+              <SelectItem value="month">Last 30 Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

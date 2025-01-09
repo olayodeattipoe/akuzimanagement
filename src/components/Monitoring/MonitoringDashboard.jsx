@@ -18,7 +18,7 @@ export default function MonitoringDashboard() {
     pendingOrders: 0,
     completedOrders: 0
   });
-  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'today', 'week', 'month'
+  const [timeFilter, setTimeFilter] = useState('today'); // 'all', 'today', 'week', 'month'
 
   useEffect(() => {
     fetchDashboardData();
