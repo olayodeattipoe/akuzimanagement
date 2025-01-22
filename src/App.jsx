@@ -9,6 +9,7 @@ export default function App() {
         <Route path="/servers" element={<Dashboard />} />
         <Route path="/analytics" element={<Dashboard />} />
         <Route path="/monitoring" element={<Dashboard />} />
+        <Route path="/pos-admins" element={<Dashboard />} />
       </Routes>
     </Router>
   )

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { GalleryVerticalEnd, Users, BarChart, LineChart } from "lucide-react"
+import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2 } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sheet,
@@ -29,6 +29,11 @@ const menuItems = [
     title: "Monitoring",
     url: "/monitoring",
     icon: LineChart,
+  },
+  {
+    title: "POS Admins",
+    url: "/pos-admins",
+    icon: Users2,
   },
 ]
 
