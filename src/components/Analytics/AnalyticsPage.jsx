@@ -29,8 +29,12 @@ export default function AnalyticsPage() {
   const [paymentFilter, setPaymentFilter] = useState('all');
 
   const calculateOrderTotal = (containers) => {
-    return Object.entries(containers).reduce((grandTotal, [_, items]) => {
-      const basketTotal = items.reduce((total, item) => {
+    return Object.entries(containers).reduce((grandTotal, [_, container]) => {
+      // Get the container items and repeat count
+      const { items, repeatCount = 1 } = container;
+      
+      // Calculate the total for this container
+      const containerTotal = items.reduce((total, item) => {
         let customizationTotal = 0;
 
         if (item.customizations) {
@@ -61,7 +65,8 @@ export default function AnalyticsPage() {
         return total;
       }, 0);
       
-      return Number(grandTotal) + Number(basketTotal);
+      // Multiply the container total by its repeat count
+      return Number(grandTotal) + (Number(containerTotal) * Number(repeatCount));
     }, 0);
   };
 
