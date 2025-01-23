@@ -33,45 +33,65 @@ export default function AnalyticsPage() {
   const [adminFilter, setAdminFilter] = useState('');
 
   const calculateOrderTotal = (containers) => {
-    return Object.entries(containers).reduce((grandTotal, [_, container]) => {
-      // Get the container items and repeat count
-      const { items, repeatCount = 1 } = container;
-      
-      // Calculate the total for this container
-      const containerTotal = items.reduce((total, item) => {
-        let customizationTotal = 0;
+    if (!containers || typeof containers !== 'object') {
+      return 0;
+    }
 
-        if (item.customizations) {
-          Object.entries(item.customizations).forEach(([_, optionChoices]) => {
-            Object.entries(optionChoices).forEach(([_, choice]) => {
-              if (item.food_type === 'PK' && choice.pricing_type === 'INC') {
-                customizationTotal += Number(choice.price) || 0;
-              } else if (choice.quantity > 0) {
-                customizationTotal += Number(choice.price) || 0;
+    try {
+      return Object.entries(containers).reduce((grandTotal, [_, container]) => {
+        if (!container || !container.items || !Array.isArray(container.items)) {
+          return grandTotal;
+        }
+
+        // Get the container items and repeat count
+        const { items = [], repeatCount = 1 } = container;
+        
+        // Calculate the total for this container
+        const containerTotal = items.reduce((total, item) => {
+          if (!item || !item.is_available) {
+            return total;
+          }
+
+          let customizationTotal = 0;
+
+          if (item.customizations && typeof item.customizations === 'object') {
+            Object.entries(item.customizations).forEach(([_, optionChoices]) => {
+              if (optionChoices && typeof optionChoices === 'object') {
+                Object.entries(optionChoices).forEach(([_, choice]) => {
+                  if (!choice || !choice.is_available) return;
+
+                  if (item.food_type === 'PK' && choice.pricing_type === 'INC') {
+                    customizationTotal += Number(choice.price) || 0;
+                  } else if (choice.quantity > 0) {
+                    customizationTotal += Number(choice.price) || 0;
+                  }
+                });
               }
             });
-          });
-        }
-
-        const quantity = Number(item.quantity) || 1;
-        const basePrice = Number(item.base_price) || 0;
-        const mainDishPrice = Number(item.main_dish_price) || 0;
-
-        if (item.food_type === 'SA') {
-          return total + (basePrice * quantity);
-        } else if (item.food_type === 'MD' || item.food_type === 'PK') {
-          if (item.pricing_type === 'INC') {
-            return total + mainDishPrice + customizationTotal;
-          } else {
-            return total + (basePrice * quantity) + customizationTotal;
           }
-        }
-        return total;
+
+          const quantity = Number(item.quantity) || 1;
+          const basePrice = Number(item.base_price) || 0;
+          const mainDishPrice = Number(item.main_dish_price) || 0;
+
+          if (item.food_type === 'SA') {
+            return total + (basePrice * quantity);
+          } else if (item.food_type === 'MD' || item.food_type === 'PK') {
+            if (item.pricing_type === 'INC') {
+              return total + mainDishPrice + customizationTotal;
+            } else {
+              return total + (basePrice * quantity) + customizationTotal;
+            }
+          }
+          return total;
+        }, 0);
+        
+        return Number(grandTotal) + (Number(containerTotal) * (Number(repeatCount) || 1));
       }, 0);
-      
-      // Multiply the container total by its repeat count
-      return Number(grandTotal) + (Number(containerTotal) * Number(repeatCount));
-    }, 0);
+    } catch (error) {
+      console.error('Error calculating order total:', error);
+      return 0;
+    }
   };
 
   useEffect(() => {
@@ -262,7 +282,9 @@ export default function AnalyticsPage() {
                     <TableRow key={order.uuid}>
                       <TableCell className="font-medium">{order.uuid}</TableCell>
                       <TableCell>{order.customer__name || 'Guest'}</TableCell>
-                      <TableCell>GHS {calculateOrderTotal(order.containers).toFixed(2)}</TableCell>
+                      <TableCell>
+                        GHS {(order?.containers ? calculateOrderTotal(order.containers) : 0).toFixed(2)}
+                      </TableCell>
                       <TableCell>{order.payment_method}</TableCell>
                       <TableCell>{order.server?.username || 'Unassigned'}</TableCell>
                       <TableCell>{order.admin?.username || 'N/A'}</TableCell>
