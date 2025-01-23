@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API_CONFIG } from '@/config/constants';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,9 @@ export default function AnalyticsPage() {
   });
   const [timeFilter, setTimeFilter] = useState('today');
   const [paymentFilter, setPaymentFilter] = useState('all');
+  const [customerFilter, setCustomerFilter] = useState('');
+  const [serverFilter, setServerFilter] = useState('');
+  const [adminFilter, setAdminFilter] = useState('');
 
   const calculateOrderTotal = (containers) => {
     return Object.entries(containers).reduce((grandTotal, [_, container]) => {
@@ -92,9 +96,7 @@ export default function AnalyticsPage() {
 
       // Calculate total sales with filtered orders
       const totalSales = filteredOrders.reduce((sum, order) => {
-        if (!order.containers || typeof order.containers !== 'object') {
-          return sum;
-        }
+        if (!order.containers || typeof order.containers !== 'object') return sum;
         const orderTotal = calculateOrderTotal(order.containers);
         return Number(sum) + Number(orderTotal);
       }, 0);
@@ -105,15 +107,30 @@ export default function AnalyticsPage() {
       });
     } catch (error) {
       console.error('Error fetching analytics data:', error);
-      setStats({
-        totalOrders: 0,
-        totalSales: 0
-      });
+      setStats({ totalOrders: 0, totalSales: 0 });
     }
   };
 
+  // Add filter function for orders
+  const filteredOrders = orders.filter(order => {
+    const customerMatch = (order.customer__name || 'Guest').toLowerCase().includes(customerFilter.toLowerCase());
+    const serverMatch = (order.server?.username || 'Unassigned').toLowerCase().includes(serverFilter.toLowerCase());
+    const adminMatch = (order.admin?.username || 'N/A').toLowerCase().includes(adminFilter.toLowerCase());
+    return customerMatch && serverMatch && adminMatch;
+  });
+
+  // Calculate filtered stats
+  const filteredStats = {
+    totalOrders: filteredOrders.length,
+    totalSales: filteredOrders.reduce((sum, order) => {
+      if (!order.containers || typeof order.containers !== 'object') return sum;
+      const orderTotal = calculateOrderTotal(order.containers);
+      return Number(sum) + Number(orderTotal);
+    }, 0)
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Sales Analytics</h1>
         <div className="flex gap-4">
@@ -141,16 +158,17 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Stats Cards - Now using filteredStats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
             <Badge variant="success">
-              GHS {typeof stats.totalSales === 'number' ? stats.totalSales.toFixed(2) : '0.00'}
+              GHS {filteredStats.totalSales.toFixed(2)}
             </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">GHS {stats.totalSales.toFixed(2)}</div>
+            <div className="text-2xl font-bold">GHS {filteredStats.totalSales.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               {timeFilter === 'all' ? 'All time sales' :
                timeFilter === 'today' ? 'Today\'s sales' :
@@ -162,11 +180,11 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge>{stats.totalOrders}</Badge>
+            <Badge>{filteredStats.totalOrders}</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">Number of orders processed</p>
+            <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
+            <p className="text-xs text-muted-foreground">Completed orders</p>
           </CardContent>
         </Card>
       </div>
@@ -176,35 +194,67 @@ export default function AnalyticsPage() {
           <CardTitle>Sales History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Payment Method</TableHead>
-                  <TableHead>Date & Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map(order => (
-                  <TableRow key={order.uuid} className="border-b bg-card hover:bg-muted/50">
-                    <TableCell className="px-6 py-4 font-medium">{order.uuid}</TableCell>
-                    <TableCell className="px-6 py-4">{order.customer__name || 'Guest'}</TableCell>
-                    <TableCell className="px-6 py-4">
-                      GHS {calculateOrderTotal(order.containers).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {order.payment_method}
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {new Date(order.timestamp).toLocaleString()}
-                    </TableCell>
+          <div className="space-y-4">
+            {/* Search Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium">Filter Customer</label>
+                <Input
+                  placeholder="Search customer..."
+                  value={customerFilter}
+                  onChange={(e) => setCustomerFilter(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Filter Server</label>
+                <Input
+                  placeholder="Search server..."
+                  value={serverFilter}
+                  onChange={(e) => setServerFilter(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Filter Admin</label>
+                <Input
+                  placeholder="Search admin..."
+                  value={adminFilter}
+                  onChange={(e) => setAdminFilter(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="relative overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Payment Method</TableHead>
+                    <TableHead>Server</TableHead>
+                    <TableHead>Admin</TableHead>
+                    <TableHead>Date & Time</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map(order => (
+                    <TableRow key={order.uuid}>
+                      <TableCell className="font-medium">{order.uuid}</TableCell>
+                      <TableCell>{order.customer__name || 'Guest'}</TableCell>
+                      <TableCell>GHS {calculateOrderTotal(order.containers).toFixed(2)}</TableCell>
+                      <TableCell>{order.payment_method}</TableCell>
+                      <TableCell>{order.server?.username || 'Unassigned'}</TableCell>
+                      <TableCell>{order.admin?.username || 'N/A'}</TableCell>
+                      <TableCell>{new Date(order.timestamp).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
