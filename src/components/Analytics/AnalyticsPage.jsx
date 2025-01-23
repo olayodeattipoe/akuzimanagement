@@ -85,6 +85,7 @@ export default function AnalyticsPage() {
         content: { timeFilter }
       });
 
+      // Ensure we have valid data
       const allOrders = Array.isArray(response.data) ? response.data : [];
       
       // Filter orders based on payment method
@@ -94,11 +95,16 @@ export default function AnalyticsPage() {
 
       setOrders(filteredOrders);
 
-      // Calculate total sales with filtered orders
+      // Calculate total sales with filtered orders - with safety checks
       const totalSales = filteredOrders.reduce((sum, order) => {
-        if (!order.containers || typeof order.containers !== 'object') return sum;
-        const orderTotal = calculateOrderTotal(order.containers);
-        return Number(sum) + Number(orderTotal);
+        if (!order?.containers || typeof order.containers !== 'object') return sum;
+        try {
+          const orderTotal = calculateOrderTotal(order.containers);
+          return Number(sum) + (Number(orderTotal) || 0);
+        } catch (error) {
+          console.error('Error calculating order total:', error);
+          return sum;
+        }
       }, 0);
 
       setStats({
@@ -108,24 +114,35 @@ export default function AnalyticsPage() {
     } catch (error) {
       console.error('Error fetching analytics data:', error);
       setStats({ totalOrders: 0, totalSales: 0 });
+      setOrders([]); // Ensure orders is at least an empty array
     }
   };
 
-  // Add filter function for orders
-  const filteredOrders = orders.filter(order => {
-    const customerMatch = (order.customer__name || 'Guest').toLowerCase().includes(customerFilter.toLowerCase());
-    const serverMatch = (order.server?.username || 'Unassigned').toLowerCase().includes(serverFilter.toLowerCase());
-    const adminMatch = (order.admin?.username || 'N/A').toLowerCase().includes(adminFilter.toLowerCase());
-    return customerMatch && serverMatch && adminMatch;
+  // Add safety checks to filter function
+  const filteredOrders = (orders || []).filter(order => {
+    try {
+      const customerMatch = (order?.customer__name || 'Guest').toLowerCase().includes(customerFilter.toLowerCase());
+      const serverMatch = (order?.server?.username || 'Unassigned').toLowerCase().includes(serverFilter.toLowerCase());
+      const adminMatch = (order?.admin?.username || 'N/A').toLowerCase().includes(adminFilter.toLowerCase());
+      return customerMatch && serverMatch && adminMatch;
+    } catch (error) {
+      console.error('Error filtering order:', error);
+      return false;
+    }
   });
 
-  // Calculate filtered stats
+  // Add safety checks to filtered stats calculation
   const filteredStats = {
     totalOrders: filteredOrders.length,
-    totalSales: filteredOrders.reduce((sum, order) => {
-      if (!order.containers || typeof order.containers !== 'object') return sum;
-      const orderTotal = calculateOrderTotal(order.containers);
-      return Number(sum) + Number(orderTotal);
+    totalSales: (filteredOrders || []).reduce((sum, order) => {
+      if (!order?.containers || typeof order.containers !== 'object') return sum;
+      try {
+        const orderTotal = calculateOrderTotal(order.containers);
+        return Number(sum) + (Number(orderTotal) || 0);
+      } catch (error) {
+        console.error('Error calculating filtered total:', error);
+        return sum;
+      }
     }, 0)
   };
 
