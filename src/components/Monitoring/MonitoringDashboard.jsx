@@ -38,7 +38,7 @@ export default function MonitoringDashboard() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [serverFilter, setServerFilter] = useState('');
   const [adminFilter, setAdminFilter] = useState('');
-  const [orderTypeFilter, setOrderTypeFilter] = useState('');
+  const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -68,7 +68,7 @@ export default function MonitoringDashboard() {
     const customerMatch = (order.customer?.name || 'Guest').toLowerCase().includes(customerFilter.toLowerCase());
     const serverMatch = (order.server?.username || 'Unassigned').toLowerCase().includes(serverFilter.toLowerCase());
     const adminMatch = (order.admin?.username || 'N/A').toLowerCase().includes(adminFilter.toLowerCase());
-    const orderTypeMatch = !orderTypeFilter || order.order_type === orderTypeFilter;
+    const orderTypeMatch = orderTypeFilter === 'all' || order.order_type === orderTypeFilter;
     return customerMatch && serverMatch && adminMatch && orderTypeMatch;
   });
 
@@ -258,10 +258,10 @@ export default function MonitoringDashboard() {
                 <label className="text-sm font-medium">Order Type</label>
                 <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="All Types" />
+                    <SelectValue placeholder="Select order type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="delivery">Delivery</SelectItem>
                     <SelectItem value="pickup">Pickup</SelectItem>
                     <SelectItem value="on_site">On Site</SelectItem>
