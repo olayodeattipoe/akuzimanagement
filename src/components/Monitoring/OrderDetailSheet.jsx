@@ -85,15 +85,34 @@ export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatu
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">Customer</h3>
-                  <p className="text-sm text-muted-foreground">{order.customer__name || 'Guest'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {order.customer?.name || 'Guest'}
+                  </p>
+                  {order.customer?.phone_number && (
+                    <p className="text-xs text-muted-foreground">
+                      {order.customer.phone_number}
+                    </p>
+                  )}
                 </div>
-                <Badge variant={
-                  order.status === 'completed' ? 'success' :
-                  order.status === 'unprocessed' ? 'warning' :
-                  'default'
-                }>
-                  {order.status}
-                </Badge>
+                <div className="space-y-1">
+                  <Badge variant={
+                    order.status === 'completed' ? 'success' :
+                    order.status === 'unprocessed' ? 'warning' :
+                    'default'
+                  }>
+                    {order.status}
+                  </Badge>
+                  {order.order_type && (
+                    <div className="text-xs text-muted-foreground text-right">
+                      {order.order_type}
+                    </div>
+                  )}
+                  {order.location && (
+                    <div className="text-xs text-muted-foreground text-right">
+                      {order.location}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
