@@ -21,6 +21,12 @@ import {
 import { Button } from "@/components/ui/button";
 import OrderDetailSheet from './OrderDetailSheet';
 
+const ORDER_TYPE_CHOICES = {
+  delivery: 'Delivery',
+  pickup: 'Pickup',
+  on_site: 'On Site'
+};
+
 export default function MonitoringDashboard() {
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
@@ -32,6 +38,7 @@ export default function MonitoringDashboard() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [serverFilter, setServerFilter] = useState('');
   const [adminFilter, setAdminFilter] = useState('');
+  const [orderTypeFilter, setOrderTypeFilter] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -58,10 +65,11 @@ export default function MonitoringDashboard() {
   };
 
   const filteredOrders = orders.filter(order => {
-    const customerMatch = (order.customer__name || 'Guest').toLowerCase().includes(customerFilter.toLowerCase());
-    const serverMatch = (order.staff__username || 'Unassigned').toLowerCase().includes(serverFilter.toLowerCase());
-    const adminMatch = (order.admin__username || 'N/A').toLowerCase().includes(adminFilter.toLowerCase());
-    return customerMatch && serverMatch && adminMatch;
+    const customerMatch = (order.customer?.name || 'Guest').toLowerCase().includes(customerFilter.toLowerCase());
+    const serverMatch = (order.server?.username || 'Unassigned').toLowerCase().includes(serverFilter.toLowerCase());
+    const adminMatch = (order.admin?.username || 'N/A').toLowerCase().includes(adminFilter.toLowerCase());
+    const orderTypeMatch = !orderTypeFilter || order.order_type === orderTypeFilter;
+    return customerMatch && serverMatch && adminMatch && orderTypeMatch;
   });
 
   // Calculate filtered stats based on filtered orders
@@ -218,7 +226,7 @@ export default function MonitoringDashboard() {
         <CardContent>
           <div className="space-y-4">
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium">Filter Customer</label>
                 <Input
@@ -246,6 +254,20 @@ export default function MonitoringDashboard() {
                   className="mt-1"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium">Order Type</label>
+                <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="delivery">Delivery</SelectItem>
+                    <SelectItem value="pickup">Pickup</SelectItem>
+                    <SelectItem value="on_site">On Site</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Table */}
@@ -256,16 +278,20 @@ export default function MonitoringDashboard() {
                     <th className="px-6 py-3">Order ID</th>
                     <th className="px-6 py-3">Customer</th>
                     <th className="px-6 py-3">Status</th>
+                    <th className="px-6 py-3">Order Type</th>
                     <th className="px-6 py-3">Date & Time</th>
                     <th className="px-6 py-3">Server</th>
                     <th className="px-6 py-3">Admin</th>
+                    <th className="px-6 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredOrders.map(order => (
                     <tr key={order.uuid} className="border-b bg-card hover:bg-muted/50">
-                      <td className="px-6 py-4 font-medium">{order.uuid}</td>
-                      <td className="px-6 py-4">{order.customer__name || 'Guest'}</td>
+                      <td className="px-6 py-4 font-medium">
+                        {order.uuid.slice(0, 6)}
+                      </td>
+                      <td className="px-6 py-4">{order.customer?.name || 'Guest'}</td>
                       <td className="px-6 py-4">
                         <Badge variant={
                           order.status === 'completed' ? 'success' :
@@ -276,10 +302,15 @@ export default function MonitoringDashboard() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4">
+                        <Badge variant="outline">
+                          {ORDER_TYPE_CHOICES[order.order_type] || order.order_type}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
                         {new Date(order.timestamp).toLocaleString()}
                       </td>
-                      <td className="px-6 py-4">{order.staff__username || 'Unassigned'}</td>
-                      <td className="px-6 py-4">{order.admin__username || 'N/A'}</td>
+                      <td className="px-6 py-4">{order.server?.username || 'Unassigned'}</td>
+                      <td className="px-6 py-4">{order.admin?.username || 'N/A'}</td>
                       <td className="px-6 py-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
