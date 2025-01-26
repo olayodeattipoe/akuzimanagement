@@ -11,6 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function MonitoringDashboard() {
   const [orders, setOrders] = useState([]);
@@ -23,6 +37,8 @@ export default function MonitoringDashboard() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [serverFilter, setServerFilter] = useState('');
   const [adminFilter, setAdminFilter] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -58,6 +74,88 @@ export default function MonitoringDashboard() {
     totalOrders: filteredOrders.length,
     pendingOrders: filteredOrders.filter(order => order.status === 'unprocessed').length,
     completedOrders: filteredOrders.filter(order => order.status === 'completed').length
+  };
+
+  const updateOrderStatus = async (orderUuid, newStatus) => {
+    try {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+        action: 'update_order_status',
+        content: {
+          order_uuid: orderUuid,
+          status: newStatus
+        }
+      });
+
+      if (response.data.status === 'success') {
+        // Update the order in the local state
+        setOrders(orders.map(order => 
+          order.uuid === orderUuid 
+            ? { ...order, status: newStatus }
+            : order
+        ));
+        setIsModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
+
+  const calculateOrderTotal = (containers) => {
+    if (!containers || typeof containers !== 'object') {
+      return 0;
+    }
+
+    try {
+      return Object.entries(containers).reduce((grandTotal, [_, container]) => {
+        if (!container || !container.items || !Array.isArray(container.items)) {
+          return grandTotal;
+        }
+
+        const { items = [], repeatCount = 1 } = container;
+        
+        const containerTotal = items.reduce((total, item) => {
+          if (!item || !item.is_available) {
+            return total;
+          }
+
+          let customizationTotal = 0;
+          if (item.customizations && typeof item.customizations === 'object') {
+            Object.entries(item.customizations).forEach(([_, optionChoices]) => {
+              if (optionChoices && typeof optionChoices === 'object') {
+                Object.entries(optionChoices).forEach(([_, choice]) => {
+                  if (!choice || !choice.is_available) return;
+                  if (item.food_type === 'PK' && choice.pricing_type === 'INC') {
+                    customizationTotal += Number(choice.price) || 0;
+                  } else if (choice.quantity > 0) {
+                    customizationTotal += Number(choice.price) || 0;
+                  }
+                });
+              }
+            });
+          }
+
+          const quantity = Number(item.quantity) || 1;
+          const basePrice = Number(item.base_price) || 0;
+          const mainDishPrice = Number(item.main_dish_price) || 0;
+
+          if (item.food_type === 'SA') {
+            return total + (basePrice * quantity);
+          } else if (item.food_type === 'MD' || item.food_type === 'PK') {
+            if (item.pricing_type === 'INC') {
+              return total + mainDishPrice + customizationTotal;
+            } else {
+              return total + (basePrice * quantity) + customizationTotal;
+            }
+          }
+          return total;
+        }, 0);
+        
+        return Number(grandTotal) + (Number(containerTotal) * (Number(repeatCount) || 1));
+      }, 0);
+    } catch (error) {
+      console.error('Error calculating order total:', error);
+      return 0;
+    }
   };
 
   return (
@@ -187,6 +285,23 @@ export default function MonitoringDashboard() {
                       </td>
                       <td className="px-6 py-4">{order.staff__username || 'Unassigned'}</td>
                       <td className="px-6 py-4">{order.admin__username || 'N/A'}</td>
+                      <td className="px-6 py-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedOrder(order);
+                              setIsModalOpen(true);
+                            }}>
+                              View Details
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -195,6 +310,130 @@ export default function MonitoringDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-4">
+              {/* Header Info */}
+              <div className="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-lg">
+                <div>
+                  <h3 className="font-medium">Order ID</h3>
+                  <p className="text-lg font-bold">{selectedOrder.uuid}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(selectedOrder.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <h3 className="font-medium">Customer</h3>
+                  <p className="text-lg font-bold">{selectedOrder.customer__name || 'Guest'}</p>
+                  <Badge variant={
+                    selectedOrder.status === 'completed' ? 'success' :
+                    selectedOrder.status === 'unprocessed' ? 'warning' :
+                    'default'
+                  }>
+                    {selectedOrder.status}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div className="space-y-4">
+                {selectedOrder.containers && Object.entries(selectedOrder.containers).map(([containerId, container]) => (
+                  <div key={containerId} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">
+                        Basket {parseInt(containerId) + 1}
+                        {container.repeatCount > 1 && (
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            (×{container.repeatCount})
+                          </span>
+                        )}
+                      </h3>
+                    </div>
+
+                    <div className="space-y-4">
+                      {container.items.map((item, itemIndex) => (
+                        <div key={itemIndex} className="bg-muted/30 rounded-lg p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium">{item.item_name}</h4>
+                              {item.quantity > 1 && (
+                                <span className="text-sm text-muted-foreground">
+                                  ×{item.quantity}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-medium">
+                              GHS {item.main_dish_price || item.base_price}
+                            </span>
+                          </div>
+
+                          {/* Customizations */}
+                          {item.customizations && Object.entries(item.customizations).map(([category, choices]) => (
+                            <div key={category} className="mt-2">
+                              <div className="text-sm font-medium">{category}</div>
+                              {Object.entries(choices).map(([name, choice]) => 
+                                choice.is_available && choice.quantity > 0 && (
+                                  <div key={name} className="flex justify-between text-sm text-muted-foreground">
+                                    <span>
+                                      {name}
+                                      {choice.quantity > 1 && (
+                                        <span className="ml-1">×{choice.quantity}</span>
+                                      )}
+                                    </span>
+                                    <span>GHS {Number(choice.price).toFixed(2)}</span>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div className="text-lg font-bold">
+                  Total: GHS {calculateOrderTotal(selectedOrder.containers).toFixed(2)}
+                </div>
+                {selectedOrder.status === 'unprocessed' && (
+                  <div className="space-x-2">
+                    <Button
+                      variant="destructive"
+                      onClick={() => updateOrderStatus(selectedOrder.uuid, 'cancelled')}
+                    >
+                      Cancel Order
+                    </Button>
+                    <Button
+                      variant="success"
+                      onClick={() => updateOrderStatus(selectedOrder.uuid, 'completed')}
+                    >
+                      Mark as Completed
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-medium">Total Amount</span>
+                  <span className="text-xl font-bold">
+                    GHS {calculateOrderTotal(selectedOrder.containers).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

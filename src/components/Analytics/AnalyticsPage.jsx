@@ -19,6 +19,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function AnalyticsPage() {
   const [orders, setOrders] = useState([]);
@@ -31,6 +41,7 @@ export default function AnalyticsPage() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [serverFilter, setServerFilter] = useState('');
   const [adminFilter, setAdminFilter] = useState('');
+  const [date, setDate] = useState(null);
 
   const calculateOrderTotal = (containers) => {
     if (!containers || typeof containers !== 'object') {
@@ -96,13 +107,16 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, [timeFilter, paymentFilter]);
+  }, [timeFilter, paymentFilter, date]);
 
   const fetchAnalyticsData = async () => {
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: 'get_analytics',
-        content: { timeFilter }
+        content: { 
+          timeFilter,
+          specificDate: date ? format(date, 'yyyy-MM-dd') : null 
+        }
       });
 
       // Ensure we have valid data
@@ -171,6 +185,31 @@ export default function AnalyticsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Sales Analytics</h1>
         <div className="flex gap-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[200px] justify-start text-left font-normal",
+                  !date && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => {
+                  setDate(newDate);
+                  setTimeFilter('all'); // Reset time filter when specific date is selected
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
           <Select value={paymentFilter} onValueChange={setPaymentFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Payment Method" />
@@ -181,7 +220,14 @@ export default function AnalyticsPage() {
               <SelectItem value="momo">Mobile Money Only</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={timeFilter} onValueChange={setTimeFilter}>
+          <Select 
+            value={timeFilter} 
+            onValueChange={(value) => {
+              setTimeFilter(value);
+              setDate(null); // Reset date when time filter changes
+            }}
+            disabled={!!date} // Disable time filter when specific date is selected
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select time period" />
             </SelectTrigger>
