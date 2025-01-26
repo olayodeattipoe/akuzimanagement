@@ -7,6 +7,56 @@ import { Button } from "@/components/ui/button";
 export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatus }) {
   if (!order) return null;
 
+  const calculateTotalAmount = () => {
+    if (!order.containers || typeof order.containers !== 'object') return 0;
+
+    return Object.entries(order.containers).reduce((grandTotal, [_, container]) => {
+      if (!container || !container.items || !Array.isArray(container.items)) {
+        return grandTotal;
+      }
+
+      const { items = [], repeatCount = 1 } = container;
+      
+      const containerTotal = items.reduce((total, item) => {
+        if (!item || !item.is_available) {
+          return total;
+        }
+
+        let customizationTotal = 0;
+        if (item.customizations) {
+          Object.entries(item.customizations).forEach(([_, optionChoices]) => {
+            Object.entries(optionChoices).forEach(([_, choice]) => {
+              if (choice.is_available) {
+                if (item.food_type === 'PK' && choice.pricing_type === 'INC') {
+                  customizationTotal += Number(choice.price) || 0;
+                } else if (choice.quantity > 0) {
+                  customizationTotal += Number(choice.price) || 0;
+                }
+              }
+            });
+          });
+        }
+
+        const quantity = Number(item.quantity) || 1;
+        const basePrice = Number(item.base_price) || 0;
+        const mainDishPrice = Number(item.main_dish_price) || 0;
+
+        if (item.food_type === 'SA') {
+          return total + (basePrice * quantity);
+        } else if (item.food_type === 'MD' || item.food_type === 'PK') {
+          if (item.pricing_type === 'INC') {
+            return total + mainDishPrice + customizationTotal;
+          } else {
+            return total + (basePrice * quantity) + customizationTotal;
+          }
+        }
+        return total;
+      }, 0);
+
+      return Number(grandTotal) + (Number(containerTotal) * (Number(repeatCount) || 1));
+    }, 0);
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
@@ -111,7 +161,7 @@ export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatu
             <div className="flex justify-between items-center mb-4">
               <span className="text-muted-foreground">Total Amount</span>
               <span className="text-xl font-semibold">
-                GHS {calculateOrderTotal(order.containers).toFixed(2)}
+                GHS {calculateTotalAmount().toFixed(2)}
               </span>
             </div>
 
