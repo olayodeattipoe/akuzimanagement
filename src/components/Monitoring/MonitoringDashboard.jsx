@@ -68,7 +68,7 @@ export default function MonitoringDashboard() {
     const customerMatch = (order.customer?.name || 'Guest').toLowerCase().includes(customerFilter.toLowerCase());
     const serverMatch = (order.server?.username || 'Unassigned').toLowerCase().includes(serverFilter.toLowerCase());
     const adminMatch = (order.admin?.username || 'N/A').toLowerCase().includes(adminFilter.toLowerCase());
-    const orderTypeMatch = orderTypeFilter === 'all' || order.order_type === orderTypeFilter;
+    const orderTypeMatch = orderTypeFilter === 'all' || order.order_type.toLowerCase() === orderTypeFilter.toLowerCase();
     return customerMatch && serverMatch && adminMatch && orderTypeMatch;
   });
 
