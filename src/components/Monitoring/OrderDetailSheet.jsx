@@ -1,0 +1,150 @@
+import React from "react";
+import { X } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatus }) {
+  if (!order) return null;
+
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent 
+        side="right" 
+        className="w-full sm:w-[540px] p-0"
+      >
+        <div className="flex-1 overflow-y-auto h-full flex flex-col">
+          {/* Header */}
+          <div className="flex-none border-b p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold">Order #{order.uuid.slice(0, 8)}</h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {new Date(order.timestamp).toLocaleString()}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Order Info */}
+          <div className="p-4 bg-muted/10">
+            <div className="bg-card rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium">Customer</h3>
+                  <p className="text-sm text-muted-foreground">{order.customer__name || 'Guest'}</p>
+                </div>
+                <Badge variant={
+                  order.status === 'completed' ? 'success' :
+                  order.status === 'unprocessed' ? 'warning' :
+                  'default'
+                }>
+                  {order.status}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Containers */}
+          <div className="divide-y">
+            {order.containers && Object.entries(order.containers).map(([containerId, container]) => (
+              <div key={containerId} className="p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium">
+                    Basket {parseInt(containerId) + 1}
+                    {container.repeatCount > 1 && (
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        (×{container.repeatCount})
+                      </span>
+                    )}
+                  </h3>
+                </div>
+
+                <div className="space-y-4">
+                  {container.items.map((item, itemIndex) => (
+                    <div key={itemIndex} className="bg-muted/30 rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{item.item_name}</h4>
+                          {item.quantity > 1 && (
+                            <span className="text-sm text-muted-foreground">
+                              ×{item.quantity}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-medium">
+                          GHS {item.main_dish_price || item.base_price}
+                        </span>
+                      </div>
+
+                      {/* Customizations */}
+                      {item.customizations && Object.entries(item.customizations).map(([category, choices]) => (
+                        <div key={category} className="mt-2">
+                          <div className="text-sm font-medium">{category}</div>
+                          {Object.entries(choices).map(([name, choice]) => 
+                            choice.is_available && choice.quantity > 0 && (
+                              <div key={name} className="flex justify-between text-sm text-muted-foreground">
+                                <span>
+                                  {name}
+                                  {choice.quantity > 1 && (
+                                    <span className="ml-1">×{choice.quantity}</span>
+                                  )}
+                                </span>
+                                <span>GHS {Number(choice.price).toFixed(2)}</span>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="flex-none border-t p-4 mt-auto">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-muted-foreground">Total Amount</span>
+              <span className="text-xl font-semibold">
+                GHS {calculateOrderTotal(order.containers).toFixed(2)}
+              </span>
+            </div>
+
+            {/* Show buttons regardless of status */}
+            <div className="flex justify-end space-x-2 mt-4">
+              {order.status !== 'cancelled' && (
+                <Button
+                  variant="destructive"
+                  onClick={() => onUpdateStatus(order.uuid, 'cancelled')}
+                >
+                  {order.status === 'unprocessed' ? 'Cancel Order' : 'Mark as Cancelled'}
+                </Button>
+              )}
+              {order.status !== 'completed' && (
+                <Button
+                  variant="default"
+                  onClick={() => onUpdateStatus(order.uuid, 'completed')}
+                >
+                  Mark as Completed
+                </Button>
+              )}
+              {order.status !== 'unprocessed' && (
+                <Button
+                  variant="outline"
+                  onClick={() => onUpdateStatus(order.uuid, 'unprocessed')}
+                >
+                  Mark as Unprocessed
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+} 

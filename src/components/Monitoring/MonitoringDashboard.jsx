@@ -18,13 +18,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import OrderDetailSheet from './OrderDetailSheet';
 
 export default function MonitoringDashboard() {
   const [orders, setOrders] = useState([]);
@@ -311,129 +306,12 @@ export default function MonitoringDashboard() {
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
-          </DialogHeader>
-          
-          {selectedOrder && (
-            <div className="space-y-4">
-              {/* Header Info */}
-              <div className="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-lg">
-                <div>
-                  <h3 className="font-medium">Order ID</h3>
-                  <p className="text-lg font-bold">{selectedOrder.uuid}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(selectedOrder.timestamp).toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <h3 className="font-medium">Customer</h3>
-                  <p className="text-lg font-bold">{selectedOrder.customer__name || 'Guest'}</p>
-                  <Badge variant={
-                    selectedOrder.status === 'completed' ? 'success' :
-                    selectedOrder.status === 'unprocessed' ? 'warning' :
-                    'default'
-                  }>
-                    {selectedOrder.status}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Order Items */}
-              <div className="space-y-4">
-                {selectedOrder.containers && Object.entries(selectedOrder.containers).map(([containerId, container]) => (
-                  <div key={containerId} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium">
-                        Basket {parseInt(containerId) + 1}
-                        {container.repeatCount > 1 && (
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            (×{container.repeatCount})
-                          </span>
-                        )}
-                      </h3>
-                    </div>
-
-                    <div className="space-y-4">
-                      {container.items.map((item, itemIndex) => (
-                        <div key={itemIndex} className="bg-muted/30 rounded-lg p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">{item.item_name}</h4>
-                              {item.quantity > 1 && (
-                                <span className="text-sm text-muted-foreground">
-                                  ×{item.quantity}
-                                </span>
-                              )}
-                            </div>
-                            <span className="font-medium">
-                              GHS {item.main_dish_price || item.base_price}
-                            </span>
-                          </div>
-
-                          {/* Customizations */}
-                          {item.customizations && Object.entries(item.customizations).map(([category, choices]) => (
-                            <div key={category} className="mt-2">
-                              <div className="text-sm font-medium">{category}</div>
-                              {Object.entries(choices).map(([name, choice]) => 
-                                choice.is_available && choice.quantity > 0 && (
-                                  <div key={name} className="flex justify-between text-sm text-muted-foreground">
-                                    <span>
-                                      {name}
-                                      {choice.quantity > 1 && (
-                                        <span className="ml-1">×{choice.quantity}</span>
-                                      )}
-                                    </span>
-                                    <span>GHS {Number(choice.price).toFixed(2)}</span>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-between items-center pt-4 border-t">
-                <div className="text-lg font-bold">
-                  Total: GHS {calculateOrderTotal(selectedOrder.containers).toFixed(2)}
-                </div>
-                {selectedOrder.status === 'unprocessed' && (
-                  <div className="space-x-2">
-                    <Button
-                      variant="destructive"
-                      onClick={() => updateOrderStatus(selectedOrder.uuid, 'cancelled')}
-                    >
-                      Cancel Order
-                    </Button>
-                    <Button
-                      variant="success"
-                      onClick={() => updateOrderStatus(selectedOrder.uuid, 'completed')}
-                    >
-                      Mark as Completed
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 pt-4 border-t">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium">Total Amount</span>
-                  <span className="text-xl font-bold">
-                    GHS {calculateOrderTotal(selectedOrder.containers).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <OrderDetailSheet
+        order={selectedOrder}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onUpdateStatus={updateOrderStatus}
+      />
     </div>
   );
 } 
