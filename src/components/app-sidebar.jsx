@@ -40,6 +40,11 @@ const menuItems = [
     url: "/customers",
     icon: UserCircle,
   },
+  {
+    title: "Inventory",
+    url: "/inventory",
+    icon: LineChart,
+  },
 ]
 
 export function AppSidebar() {

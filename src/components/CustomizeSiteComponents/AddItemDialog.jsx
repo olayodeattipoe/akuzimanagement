@@ -7,8 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { PlusCircle } from 'lucide-react'
 import axios from 'axios'
-import { Badge } from "@/components/ui/badge"
-import { X } from 'lucide-react'
 import { API_CONFIG } from '@/config/constants'
 
 export default function AddProductDialog({ categories, setarray_to_be_added }) {
@@ -19,6 +17,13 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
     const [basePrice, setBasePrice] = useState('')
     const [pricingType, setPricingType] = useState('FIX')
     const [picture, setPicture] = useState('')
+
+    // New fields
+    const [maxAccompaniments, setMaxAccompaniments] = useState('')
+    const [unitOfMeasurement, setUnitOfMeasurement] = useState('')
+    const [batchNumber, setBatchNumber] = useState('')
+
+    const unitOptions = ["kg", "g", "L", "mL", "pcs", "box"] // Example unit options
 
     const handleCategoryChange = (value) => {
         setCategory(value)
@@ -51,12 +56,14 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
         setBasePrice('')
         setPricingType('FIX')
         setPicture('')
+        setMaxAccompaniments('')
+        setUnitOfMeasurement('')
+        setBatchNumber('')
     }
 
     const handleSubmit = (e) => {
         e.preventDefault()
 
-        // Check if required fields are filled
         if (!category || !name || !description || !basePrice) {
             alert("Please fill in all required fields");
             return;
@@ -69,26 +76,23 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
             'pricing_type': pricingType,
             'is_available': true,
             'category': category,
-            'image_url':picture,
+            'image_url': picture,
+            //'max_accompaniments': maxAccompaniments,
+            //'unit_of_measurement': unitOfMeasurement,
+            //'batch_number': batchNumber,
         }
 
-        // Only add image_url if picture exists
-        if (picture) {
-            newProduct.image_url = picture;
-        }
-
-        const handleSend = async() => {
+        const handleSend = async () => {
             try {
                 const result = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
                     'action': 'add_product',
-                    'content': newProduct 
+                    'content': newProduct
                 }, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
                 });
 
-                // Make sure we're getting the complete product data
                 setarray_to_be_added(result.data);
                 setOpen(false);
                 resetForm();
@@ -109,7 +113,7 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
                     Add Product
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[86vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Add New Product</DialogTitle>
                 </DialogHeader>
@@ -157,6 +161,34 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/**<div>
+                        <Label htmlFor="maxAccompaniments">Max Accompaniments</Label>
+                        <Input id="maxAccompaniments" type="number" value={maxAccompaniments} onChange={(e) => setMaxAccompaniments(e.target.value)} />
+                    </div>
+
+
+                    <div>
+                        <Label htmlFor="unitOfMeasurement">Unit of Measurement</Label>
+                        <Select value={unitOfMeasurement} onValueChange={setUnitOfMeasurement}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {unitOptions.map((option) => (
+                                    <SelectItem key={option} value={option}>
+                                        {option}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
+                        <Label htmlFor="batchNumber">Batch Number (Optional)</Label>
+                        <Input id="batchNumber" value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} />
+                    </div>
+                       **/ }
 
                     <div>
                         <Label htmlFor="picture">Product Image</Label>

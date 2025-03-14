@@ -1,5 +1,5 @@
 import { NewDashboard } from "@/NewDashboard"
 
-export default function CustomersPage() {
+export default function InventoryPage() {
   return <NewDashboard />
-} 
+}

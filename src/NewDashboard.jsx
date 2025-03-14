@@ -7,6 +7,7 @@ import AnalyticsPage from './components/Analytics/AnalyticsPage'
 import MonitoringDashboard from './components/Monitoring/MonitoringDashboard'
 import POSAdminPage from './components/Admin/POSAdminPage'
 import CustomersPage from './components/Customers/CustomersPage'
+import InventoryPage from "./components/Inventory/InventoryPage"
 
 export function NewDashboard() {
   const location = useLocation()
@@ -25,6 +26,8 @@ export function NewDashboard() {
         return <POSAdminPage />
       case '/customers':
         return <CustomersPage />
+      case '/inventory':
+          return <InventoryPage/>
       default:
         return (
           <CustomizeSite 
