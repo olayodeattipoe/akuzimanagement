@@ -30,12 +30,14 @@ export function NewDashboard() {
           return <InventoryPage/>
       default:
         return (
-          <CustomizeSite 
-            selectedCategory={selectedCategory} 
-            setSelectedCategory={setSelectedCategory} 
-            array={control_array} 
-            setControl_array={setControl_array} 
-          />
+          <div className="p-4">
+            <CustomizeSite 
+              selectedCategory={selectedCategory} 
+              setSelectedCategory={setSelectedCategory} 
+              array={control_array} 
+              setControl_array={setControl_array} 
+            />
+          </div>
         )
     }
   }
@@ -46,8 +48,8 @@ export function NewDashboard() {
         <AppSidebar />
       </header>
       <main className="flex-1 w-full overflow-auto">
-        <div className="container mx-auto h-full flex items-start justify-center p-6">
-          <div className="w-full">
+        <div className="mx-auto h-full flex">
+          <div className="w-screen">
             {getPageContent()}
           </div>
         </div>

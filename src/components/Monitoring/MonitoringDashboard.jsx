@@ -20,6 +20,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import OrderDetailSheet from './OrderDetailSheet';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { LoadingSpinner, TableLoadingState, CardLoadingState } from "@/components/ui/loading";
 
 const ORDER_TYPE_CHOICES = {
   delivery: 'Delivery',
@@ -41,6 +51,11 @@ export default function MonitoringDashboard() {
   const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -49,6 +64,7 @@ export default function MonitoringDashboard() {
   }, [timeFilter]); // Re-fetch when filter changes
 
   const fetchDashboardData = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'get_dashboard_data',
@@ -61,6 +77,8 @@ export default function MonitoringDashboard() {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,7 +97,19 @@ export default function MonitoringDashboard() {
     completedOrders: filteredOrders.filter(order => order.status === 'completed').length
   };
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   const updateOrderStatus = async (orderUuid, newStatus) => {
+    setIsUpdating(true);
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: 'update_order_status',
@@ -100,6 +130,8 @@ export default function MonitoringDashboard() {
       }
     } catch (error) {
       console.error('Error updating order status:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -165,55 +197,87 @@ export default function MonitoringDashboard() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Orders Dashboard</h1>
-        <Select value={timeFilter} onValueChange={setTimeFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">Last 7 Days</SelectItem>
-            <SelectItem value="month">Last 30 Days</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {isLoading && (
+            <div className="flex items-center">
+              <LoadingSpinner size="sm" className="mr-2" />
+              <span className="text-sm text-muted-foreground">Refreshing...</span>
+            </div>
+          )}
+          <Select value={timeFilter} onValueChange={setTimeFilter} disabled={isLoading}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">Last 7 Days</SelectItem>
+              <SelectItem value="month">Last 30 Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
-      {/* Stats Cards - Now using filteredStats */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unprocessed Orders</CardTitle>
-            <Badge variant="warning" className="ml-2">{filteredStats.pendingOrders}</Badge>
+            <Badge variant="warning" className="ml-2">
+              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.pendingOrders}
+            </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredStats.pendingOrders}</div>
-            <p className="text-xs text-muted-foreground">Awaiting processing</p>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{filteredStats.pendingOrders}</div>
+                <p className="text-xs text-muted-foreground">Awaiting processing</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed Orders</CardTitle>
-            <Badge variant="success" className="ml-2">{filteredStats.completedOrders}</Badge>
+            <Badge variant="success" className="ml-2">
+              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.completedOrders}
+            </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredStats.completedOrders}</div>
-            <p className="text-xs text-muted-foreground">Successfully completed</p>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{filteredStats.completedOrders}</div>
+                <p className="text-xs text-muted-foreground">Successfully completed</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge className="ml-2">{filteredStats.totalOrders}</Badge>
+            <Badge className="ml-2">
+              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.totalOrders}
+            </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {timeFilter === 'all' ? 'All time total' :
-               timeFilter === 'today' ? 'Today\'s total' :
-               timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
-            </p>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  {timeFilter === 'all' ? 'All time total' :
+                   timeFilter === 'today' ? 'Today\'s total' :
+                   timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -234,6 +298,7 @@ export default function MonitoringDashboard() {
                   value={customerFilter}
                   onChange={(e) => setCustomerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -243,6 +308,7 @@ export default function MonitoringDashboard() {
                   value={serverFilter}
                   onChange={(e) => setServerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -252,11 +318,12 @@ export default function MonitoringDashboard() {
                   value={adminFilter}
                   onChange={(e) => setAdminFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
                 <label className="text-sm font-medium">Order Type</label>
-                <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
+                <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter} disabled={isLoading}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select order type" />
                   </SelectTrigger>
@@ -286,52 +353,152 @@ export default function MonitoringDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map(order => (
-                    <tr key={order.uuid} className="border-b bg-card hover:bg-muted/50">
-                      <td className="px-6 py-4 font-medium">
-                        {order.uuid.slice(0, 6)}
-                      </td>
-                      <td className="px-6 py-4">{order.customer?.name || 'Guest'}</td>
-                      <td className="px-6 py-4">
-                        <Badge variant={
-                          order.status === 'completed' ? 'success' :
-                          order.status === 'unprocessed' ? 'warning' :
-                          'default'
-                        }>
-                          {order.status}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant="outline">
-                          {ORDER_TYPE_CHOICES[order.order_type] || order.order_type}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        {new Date(order.timestamp).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4">{order.server?.username || 'Unassigned'}</td>
-                      <td className="px-6 py-4">{order.admin?.username || 'N/A'}</td>
-                      <td className="px-6 py-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedOrder(order);
-                              setIsModalOpen(true);
-                            }}>
-                              View Details
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="8" className="px-6 py-4">
+                        <div className="flex justify-center items-center h-24">
+                          <LoadingSpinner size="lg" className="mr-2" />
+                          <p className="text-muted-foreground">Loading orders...</p>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : currentOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="px-6 py-4 text-center">
+                        No orders found
+                      </td>
+                    </tr>
+                  ) : (
+                    currentOrders.map(order => (
+                      <tr key={order.uuid} className="border-b bg-card hover:bg-muted/50">
+                        <td className="px-6 py-4 font-medium">
+                          {order.uuid.slice(0, 6)}
+                        </td>
+                        <td className="px-6 py-4">{order.customer?.name || 'Guest'}</td>
+                        <td className="px-6 py-4">
+                          <Badge variant={
+                            order.status === 'completed' ? 'success' :
+                            order.status === 'unprocessed' ? 'warning' :
+                            'default'
+                          }>
+                            {order.status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant="outline">
+                            {ORDER_TYPE_CHOICES[order.order_type] || order.order_type}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          {new Date(order.timestamp).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4">{order.server?.username || 'Unassigned'}</td>
+                        <td className="px-6 py-4">{order.admin?.username || 'N/A'}</td>
+                        <td className="px-6 py-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" disabled={isUpdating}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setIsModalOpen(true);
+                              }}>
+                                View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
+
+              {/* Pagination */}
+              {!isLoading && filteredOrders.length > 0 && (
+                <div className="mt-4 flex items-center justify-between p-2">
+
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        />
+                      </PaginationItem>
+
+                      {/* First Page */}
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => handlePageChange(1)}
+                          isActive={currentPage === 1}
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+
+                      {/* Ellipsis and pages before current */}
+                      {currentPage > 3 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Pages around current page */}
+                      {Array.from({ length: totalPages }).map((_, i) => {
+                        const pageNumber = i + 1;
+                        if (
+                          pageNumber !== 1 &&
+                          pageNumber !== totalPages &&
+                          pageNumber >= currentPage - 1 &&
+                          pageNumber <= currentPage + 1
+                        ) {
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationLink
+                                onClick={() => handlePageChange(pageNumber)}
+                                isActive={currentPage === pageNumber}
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      {/* Ellipsis and pages after current */}
+                      {currentPage < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Last Page */}
+                      {totalPages > 1 && (
+                        <PaginationItem>
+                          <PaginationLink
+                            onClick={() => handlePageChange(totalPages)}
+                            isActive={currentPage === totalPages}
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -342,6 +509,7 @@ export default function MonitoringDashboard() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onUpdateStatus={updateOrderStatus}
+        isUpdating={isUpdating}
       />
     </div>
   );

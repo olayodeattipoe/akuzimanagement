@@ -29,6 +29,16 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { LoadingSpinner, TableLoadingState, CardLoadingState } from "@/components/ui/loading";
 
 export default function AnalyticsPage() {
   const [orders, setOrders] = useState([]);
@@ -42,6 +52,11 @@ export default function AnalyticsPage() {
   const [serverFilter, setServerFilter] = useState('');
   const [adminFilter, setAdminFilter] = useState('');
   const [date, setDate] = useState(null);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true);
 
   const calculateOrderTotal = (containers) => {
     if (!containers || typeof containers !== 'object') {
@@ -110,6 +125,7 @@ export default function AnalyticsPage() {
   }, [timeFilter, paymentFilter, date]);
 
   const fetchAnalyticsData = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: 'get_analytics',
@@ -149,6 +165,8 @@ export default function AnalyticsPage() {
       console.error('Error fetching analytics data:', error);
       setStats({ totalOrders: 0, totalSales: 0 });
       setOrders([]); // Ensure orders is at least an empty array
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -164,6 +182,17 @@ export default function AnalyticsPage() {
       return false;
     }
   });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
   // Add safety checks to filtered stats calculation
   const filteredStats = {
@@ -193,6 +222,7 @@ export default function AnalyticsPage() {
                   "w-[200px] justify-start text-left font-normal",
                   !date && "text-muted-foreground"
                 )}
+                disabled={isLoading}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -210,7 +240,11 @@ export default function AnalyticsPage() {
               />
             </PopoverContent>
           </Popover>
-          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+          <Select 
+            value={paymentFilter} 
+            onValueChange={setPaymentFilter}
+            disabled={isLoading}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Payment Method" />
             </SelectTrigger>
@@ -226,7 +260,7 @@ export default function AnalyticsPage() {
               setTimeFilter(value);
               setDate(null); // Reset date when time filter changes
             }}
-            disabled={!!date} // Disable time filter when specific date is selected
+            disabled={!!date || isLoading} // Disable time filter when specific date is selected
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select time period" />
@@ -241,33 +275,53 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Stats Cards - Now using filteredStats */}
+      {/* Stats Cards - Now with loading state */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
             <Badge variant="success">
-              GHS {filteredStats.totalSales.toFixed(2)}
+              {isLoading ? <LoadingSpinner size="sm" /> : `GHS ${filteredStats.totalSales.toFixed(2)}`}
             </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">GHS {filteredStats.totalSales.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              {timeFilter === 'all' ? 'All time sales' :
-               timeFilter === 'today' ? 'Today\'s sales' :
-               timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
-            </p>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">GHS {filteredStats.totalSales.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {timeFilter === 'all' ? 'All time sales' :
+                   timeFilter === 'today' ? 'Today\'s sales' :
+                   timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+                  {date && ' for ' + format(date, "PPP")}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge>{filteredStats.totalOrders}</Badge>
+            <Badge>
+              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.totalOrders}
+            </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">Completed orders</p>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  {timeFilter === 'all' ? 'All time orders' :
+                   timeFilter === 'today' ? 'Today\'s orders' :
+                   timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+                   {date && ' for ' + format(date, "PPP")}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -287,6 +341,7 @@ export default function AnalyticsPage() {
                   value={customerFilter}
                   onChange={(e) => setCustomerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -296,6 +351,7 @@ export default function AnalyticsPage() {
                   value={serverFilter}
                   onChange={(e) => setServerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -305,6 +361,7 @@ export default function AnalyticsPage() {
                   value={adminFilter}
                   onChange={(e) => setAdminFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -324,21 +381,114 @@ export default function AnalyticsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrders.map(order => (
-                    <TableRow key={order.uuid}>
-                      <TableCell className="font-medium">{order.uuid}</TableCell>
-                      <TableCell>{order.customer__name || 'Guest'}</TableCell>
-                      <TableCell>
-                        GHS {(order?.containers ? calculateOrderTotal(order.containers) : 0).toFixed(2)}
-                      </TableCell>
-                      <TableCell>{order.payment_method}</TableCell>
-                      <TableCell>{order.server?.username || 'Unassigned'}</TableCell>
-                      <TableCell>{order.admin?.username || 'N/A'}</TableCell>
-                      <TableCell>{new Date(order.timestamp).toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
+                  {isLoading ? (
+                    <TableLoadingState colSpan={7} message="Loading orders data..." />
+                  ) : currentOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="h-24 text-center">
+                        No orders found
+                      </td>
+                    </tr>
+                  ) : (
+                    currentOrders.map(order => (
+                      <TableRow key={order.uuid}>
+                        <TableCell className="font-medium">{order.uuid}</TableCell>
+                        <TableCell className="capitalize">{order.customer__name || 'Guest'}</TableCell>
+                        <TableCell>
+                          GHS {(order?.containers ? calculateOrderTotal(order.containers) : 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="capitalize">{order.payment_method}</TableCell>
+                        <TableCell className="capitalize">{order.server?.username || 'Unassigned'}</TableCell>
+                        <TableCell className="capitalize">{order.admin?.username || 'N/A'}</TableCell>
+                        <TableCell>{new Date(order.timestamp).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
+              
+              {/* Pagination - Only show when not loading */}
+              {!isLoading && filteredOrders.length > 0 && (
+                <div className="mt-4 flex items-center justify-between p-2">
+
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        />
+                      </PaginationItem>
+
+                      {/* First Page */}
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => handlePageChange(1)}
+                          isActive={currentPage === 1}
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+
+                      {/* Ellipsis and pages before current */}
+                      {currentPage > 3 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Pages around current page */}
+                      {Array.from({ length: totalPages }).map((_, i) => {
+                        const pageNumber = i + 1;
+                        if (
+                          pageNumber !== 1 &&
+                          pageNumber !== totalPages &&
+                          pageNumber >= currentPage - 1 &&
+                          pageNumber <= currentPage + 1
+                        ) {
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationLink
+                                onClick={() => handlePageChange(pageNumber)}
+                                isActive={currentPage === pageNumber}
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      {/* Ellipsis and pages after current */}
+                      {currentPage < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Last Page */}
+                      {totalPages > 1 && (
+                        <PaginationItem>
+                          <PaginationLink
+                            onClick={() => handlePageChange(totalPages)}
+                            isActive={currentPage === totalPages}
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

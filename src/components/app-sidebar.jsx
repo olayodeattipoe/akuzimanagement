@@ -1,5 +1,5 @@
 import * as React from "react"
-import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2, UserCircle } from "lucide-react"
+import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2, UserCircle, Package} from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sheet,
@@ -43,7 +43,7 @@ const menuItems = [
   {
     title: "Inventory",
     url: "/inventory",
-    icon: LineChart,
+    icon: Package,
   },
 ]
 
@@ -61,7 +61,7 @@ export function AppSidebar() {
         <div className="border-b p-4">
           <div className="flex items-center gap-2">
             <GalleryVerticalEnd className="h-6 w-6" />
-            <span className="font-semibold">Restaurant Admin</span>
+            <span className="font-semibold">Calabash</span>
           </div>
         </div>
         <nav className="flex flex-col p-2">
