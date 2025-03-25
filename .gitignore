@@ -47,3 +47,4 @@ dist/
 # Vite
 .vite
 *.local
+node_modules
