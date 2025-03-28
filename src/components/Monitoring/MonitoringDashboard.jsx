@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/constants';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,12 +30,32 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { LoadingSpinner, TableLoadingState, CardLoadingState } from "@/components/ui/loading";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const ORDER_TYPE_CHOICES = {
   delivery: 'Delivery',
   pickup: 'Pickup',
   on_site: 'On Site'
 };
+
+const tableStyles = `
+  .table-dividers th,
+  .table-dividers td {
+    border-right: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .table-dividers th:last-child,
+  .table-dividers td:last-child {
+    border-right: none;
+  }
+`;
 
 export default function MonitoringDashboard() {
   const [orders, setOrders] = useState([]);
@@ -121,8 +141,8 @@ export default function MonitoringDashboard() {
 
       if (response.data.status === 'success') {
         // Update the order in the local state
-        setOrders(orders.map(order => 
-          order.uuid === orderUuid 
+        setOrders(orders.map(order =>
+          order.uuid === orderUuid
             ? { ...order, status: newStatus }
             : order
         ));
@@ -147,7 +167,7 @@ export default function MonitoringDashboard() {
         }
 
         const { items = [], repeatCount = 1 } = container;
-        
+
         const containerTotal = items.reduce((total, item) => {
           if (!item || !item.is_available) {
             return total;
@@ -184,7 +204,7 @@ export default function MonitoringDashboard() {
           }
           return total;
         }, 0);
-        
+
         return Number(grandTotal) + (Number(containerTotal) * (Number(repeatCount) || 1));
       }, 0);
     } catch (error) {
@@ -194,9 +214,13 @@ export default function MonitoringDashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="px-6 space-y-6">
+      <style>{tableStyles}</style>
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Orders Dashboard</h1>
+        <CardHeader className="mt-0 top-0 space-y-0">
+          <CardTitle className="text-xl font-semibold font-sans">Orders Dashboard</CardTitle>
+          <CardDescription>Manage your restaurant orders.</CardDescription>
+        </CardHeader>        
         <div className="flex items-center gap-2">
           {isLoading && (
             <div className="flex items-center">
@@ -217,7 +241,7 @@ export default function MonitoringDashboard() {
           </Select>
         </div>
       </div>
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
@@ -261,7 +285,7 @@ export default function MonitoringDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge className="ml-2">
+            <Badge className="ml-2" variant="outline">
               {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.totalOrders}
             </Badge>
           </CardHeader>
@@ -273,8 +297,8 @@ export default function MonitoringDashboard() {
                 <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
                 <p className="text-xs text-muted-foreground">
                   {timeFilter === 'all' ? 'All time total' :
-                   timeFilter === 'today' ? 'Today\'s total' :
-                   timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+                    timeFilter === 'today' ? 'Today\'s total' :
+                      timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
                 </p>
               </>
             )}
@@ -338,63 +362,61 @@ export default function MonitoringDashboard() {
             </div>
 
             {/* Table */}
-            <div className="relative overflow-x-auto rounded-md border">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase bg-muted">
-                  <tr>
-                    <th className="px-6 py-3">Order ID</th>
-                    <th className="px-6 py-3">Customer</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Order Type</th>
-                    <th className="px-6 py-3">Date & Time</th>
-                    <th className="px-6 py-3">Server</th>
-                    <th className="px-6 py-3">Admin</th>
-                    <th className="px-6 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="rounded-md border">
+              <Table className="table-dividers">
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="text-center">Order ID</TableHead>
+                    <TableHead className="text-center">Customer</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Order Type</TableHead>
+                    <TableHead className="text-center">Date & Time</TableHead>
+                    <TableHead className="text-center">Server</TableHead>
+                    <TableHead className="text-center">Admin</TableHead>
+                    <TableHead className="text-center w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {isLoading ? (
-                    <tr>
-                      <td colSpan="8" className="px-6 py-4">
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center">
                         <div className="flex justify-center items-center h-24">
                           <LoadingSpinner size="lg" className="mr-2" />
                           <p className="text-muted-foreground">Loading orders...</p>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : currentOrders.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="px-6 py-4 text-center">
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center h-24">
                         No orders found
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     currentOrders.map(order => (
-                      <tr key={order.uuid} className="border-b bg-card hover:bg-muted/50">
-                        <td className="px-6 py-4 font-medium">
-                          {order.uuid.slice(0, 6)}
-                        </td>
-                        <td className="px-6 py-4">{order.customer?.name || 'Guest'}</td>
-                        <td className="px-6 py-4">
-                          <Badge variant={
-                            order.status === 'completed' ? 'success' :
-                            order.status === 'unprocessed' ? 'warning' :
-                            'default'
-                          }>
+                      <TableRow key={order.uuid}>
+                        <TableCell className="font-medium">{order.uuid}</TableCell>
+                        <TableCell className="capitalize">{order.customer?.name || 'Guest'}</TableCell>
+                        <TableCell className="text-center capitalize text-emerald-500">
+                          <Badge className={order.status === 'completed' ? 'bg-emerald-500 text-emerald-50' :
+                            order.status === 'unprocessed' ? 'bg-yellow-500 text-yellow-50' :
+                              'bg-muted text-muted-foreground'}>
                             {order.status}
                           </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant="outline">
-                            {ORDER_TYPE_CHOICES[order.order_type] || order.order_type}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
+                        </TableCell>
+                        <TableCell className="text-center capitalize">
+                          {ORDER_TYPE_CHOICES[order.order_type] || order.order_type}
+                        </TableCell>
+                        <TableCell className="text-center">
                           {new Date(order.timestamp).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4">{order.server?.username || 'Unassigned'}</td>
-                        <td className="px-6 py-4">{order.admin?.username || 'N/A'}</td>
-                        <td className="px-6 py-4">
+                        </TableCell>
+                        <TableCell className="text-center capitalize">
+                          {order.server?.username || 'Unassigned'}
+                        </TableCell>
+                        <TableCell className="text-center capitalize">
+                          {order.admin?.username || 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" disabled={isUpdating}>
@@ -410,96 +432,96 @@ export default function MonitoringDashboard() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
+            </div>
 
-              {/* Pagination */}
-              {!isLoading && filteredOrders.length > 0 && (
-                <div className="mt-4 flex items-center justify-between p-2">
+            {/* Pagination */}
+            {!isLoading && filteredOrders.length > 0 && (
+              <div className="mt-4 flex items-center justify-between p-2">
 
-                  <Pagination>
-                    <PaginationContent>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      />
+                    </PaginationItem>
+
+                    {/* First Page */}
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => handlePageChange(1)}
+                        isActive={currentPage === 1}
+                      >
+                        1
+                      </PaginationLink>
+                    </PaginationItem>
+
+                    {/* Ellipsis and pages before current */}
+                    {currentPage > 3 && (
                       <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 1}
-                        />
+                        <PaginationEllipsis />
                       </PaginationItem>
+                    )}
 
-                      {/* First Page */}
+                    {/* Pages around current page */}
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const pageNumber = i + 1;
+                      if (
+                        pageNumber !== 1 &&
+                        pageNumber !== totalPages &&
+                        pageNumber >= currentPage - 1 &&
+                        pageNumber <= currentPage + 1
+                      ) {
+                        return (
+                          <PaginationItem key={pageNumber}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(pageNumber)}
+                              isActive={currentPage === pageNumber}
+                            >
+                              {pageNumber}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+
+                    {/* Ellipsis and pages after current */}
+                    {currentPage < totalPages - 2 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    {/* Last Page */}
+                    {totalPages > 1 && (
                       <PaginationItem>
                         <PaginationLink
-                          onClick={() => handlePageChange(1)}
-                          isActive={currentPage === 1}
+                          onClick={() => handlePageChange(totalPages)}
+                          isActive={currentPage === totalPages}
                         >
-                          1
+                          {totalPages}
                         </PaginationLink>
                       </PaginationItem>
+                    )}
 
-                      {/* Ellipsis and pages before current */}
-                      {currentPage > 3 && (
-                        <PaginationItem>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )}
-
-                      {/* Pages around current page */}
-                      {Array.from({ length: totalPages }).map((_, i) => {
-                        const pageNumber = i + 1;
-                        if (
-                          pageNumber !== 1 &&
-                          pageNumber !== totalPages &&
-                          pageNumber >= currentPage - 1 &&
-                          pageNumber <= currentPage + 1
-                        ) {
-                          return (
-                            <PaginationItem key={pageNumber}>
-                              <PaginationLink
-                                onClick={() => handlePageChange(pageNumber)}
-                                isActive={currentPage === pageNumber}
-                              >
-                                {pageNumber}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        }
-                        return null;
-                      })}
-
-                      {/* Ellipsis and pages after current */}
-                      {currentPage < totalPages - 2 && (
-                        <PaginationItem>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )}
-
-                      {/* Last Page */}
-                      {totalPages > 1 && (
-                        <PaginationItem>
-                          <PaginationLink
-                            onClick={() => handlePageChange(totalPages)}
-                            isActive={currentPage === totalPages}
-                          >
-                            {totalPages}
-                          </PaginationLink>
-                        </PaginationItem>
-                      )}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === totalPages}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </div>
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

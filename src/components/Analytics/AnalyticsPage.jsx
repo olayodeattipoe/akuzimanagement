@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/constants';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,6 +39,8 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { LoadingSpinner, TableLoadingState, CardLoadingState } from "@/components/ui/loading";
+import { ChartAreaInteractive } from "@/components/chart-area-interactive"
+import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 
 export default function AnalyticsPage() {
   const [orders, setOrders] = useState([]);
@@ -57,6 +59,37 @@ export default function AnalyticsPage() {
   const itemsPerPage = 10;
   // Loading state
   const [isLoading, setIsLoading] = useState(true);
+  const [trends, setTrends] = useState({
+    sales: {
+      percentage: 0,
+      isUp: true
+    },
+    orders: {
+      percentage: 0,
+      isUp: true
+    },
+    average: {
+      percentage: 0,
+      isUp: true
+    },
+    momo: {
+      percentage: 0,
+      isUp: true
+    }
+  });
+
+  const tableStyles = `
+  .table-dividers th,
+  .table-dividers td {
+    border-right: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .table-dividers th:last-child,
+  .table-dividers td:last-child {
+    border-right: none;
+
+  }
+`;
 
   const calculateOrderTotal = (containers) => {
     if (!containers || typeof containers !== 'object') {
@@ -145,7 +178,7 @@ export default function AnalyticsPage() {
 
       setOrders(filteredOrders);
 
-      // Calculate total sales with filtered orders - with safety checks
+      // Calculate total sales with filtered orders
       const totalSales = filteredOrders.reduce((sum, order) => {
         if (!order?.containers || typeof order.containers !== 'object') return sum;
         try {
@@ -157,6 +190,84 @@ export default function AnalyticsPage() {
         }
       }, 0);
 
+      // Calculate trends
+      const now = new Date();
+      const currentPeriodOrders = filteredOrders.filter(order => {
+        const orderDate = new Date(order.timestamp);
+        if (timeFilter === 'today') {
+          return orderDate.toDateString() === now.toDateString();
+        } else if (timeFilter === 'week') {
+          return (now - orderDate) <= 7 * 24 * 60 * 60 * 1000;
+        } else if (timeFilter === 'month') {
+          return (now - orderDate) <= 30 * 24 * 60 * 60 * 1000;
+        }
+        return true;
+      });
+
+      const previousPeriodOrders = filteredOrders.filter(order => {
+        const orderDate = new Date(order.timestamp);
+        if (timeFilter === 'today') {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          return orderDate.toDateString() === yesterday.toDateString();
+        } else if (timeFilter === 'week') {
+          const twoWeeksAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
+          return orderDate >= twoWeeksAgo && orderDate < new Date(now - 7 * 24 * 60 * 60 * 1000);
+        } else if (timeFilter === 'month') {
+          const twoMonthsAgo = new Date(now - 60 * 24 * 60 * 60 * 1000);
+          return orderDate >= twoMonthsAgo && orderDate < new Date(now - 30 * 24 * 60 * 60 * 1000);
+        }
+        return false;
+      });
+
+      // Calculate previous period totals
+      const previousTotalSales = previousPeriodOrders.reduce((sum, order) => {
+        if (!order?.containers) return sum;
+        return sum + calculateOrderTotal(order.containers);
+      }, 0);
+
+      // Calculate trend percentages
+      const calculateTrendPercentage = (current, previous) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return ((current - previous) / previous * 100);
+      };
+
+      // Current period stats
+      const currentStats = {
+        sales: totalSales,
+        orders: currentPeriodOrders.length,
+        average: totalSales / currentPeriodOrders.length || 0,
+        momo: (currentPeriodOrders.filter(o => o.payment_method === 'momo').length / currentPeriodOrders.length) * 100 || 0
+      };
+
+      // Previous period stats
+      const previousStats = {
+        sales: previousTotalSales,
+        orders: previousPeriodOrders.length,
+        average: previousTotalSales / previousPeriodOrders.length || 0,
+        momo: (previousPeriodOrders.filter(o => o.payment_method === 'momo').length / previousPeriodOrders.length) * 100 || 0
+      };
+
+      // Update trends
+      setTrends({
+        sales: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.sales, previousStats.sales)).toFixed(1),
+          isUp: currentStats.sales >= previousStats.sales
+        },
+        orders: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.orders, previousStats.orders)).toFixed(1),
+          isUp: currentStats.orders >= previousStats.orders
+        },
+        average: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.average, previousStats.average)).toFixed(1),
+          isUp: currentStats.average >= previousStats.average
+        },
+        momo: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.momo, previousStats.momo)).toFixed(1),
+          isUp: currentStats.momo >= previousStats.momo
+        }
+      });
+
       setStats({
         totalOrders: filteredOrders.length,
         totalSales: Number(totalSales)
@@ -165,6 +276,12 @@ export default function AnalyticsPage() {
       console.error('Error fetching analytics data:', error);
       setStats({ totalOrders: 0, totalSales: 0 });
       setOrders([]); // Ensure orders is at least an empty array
+      setTrends({
+        sales: { percentage: 0, isUp: true },
+        orders: { percentage: 0, isUp: true },
+        average: { percentage: 0, isUp: true },
+        momo: { percentage: 0, isUp: true }
+      });
     } finally {
       setIsLoading(false);
     }
@@ -211,9 +328,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Sales Analytics</h1>
-        <div className="flex gap-4">
+        <div className="flex gap-4 justify-end items-end">
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -273,58 +388,149 @@ export default function AnalyticsPage() {
             </SelectContent>
           </Select>
         </div>
-      </div>
-
+        
       {/* Stats Cards - Now with loading state */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <Badge variant="success">
-              {isLoading ? <LoadingSpinner size="sm" /> : `GHS ${filteredStats.totalSales.toFixed(2)}`}
-            </Badge>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>Total Sales</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? <LoadingSpinner /> : `GHS ${filteredStats.totalSales.toFixed(2)}`}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.sales.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.sales.percentage}%
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <CardLoadingState />
-            ) : (
-              <>
-                <div className="text-2xl font-bold">GHS {filteredStats.totalSales.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">
-                  {timeFilter === 'all' ? 'All time sales' :
-                   timeFilter === 'today' ? 'Today\'s sales' :
-                   timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
-                  {date && ' for ' + format(date, "PPP")}
-                </p>
-              </>
-            )}
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.sales.isUp ? "Trending up" : "Trending down"} this period
+              {trends.sales.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {timeFilter === 'all' ? 'All time sales' :
+               timeFilter === 'today' ? 'Today\'s sales' :
+               timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+              {date && ' for ' + format(date, "PPP")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge>
-              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.totalOrders}
-            </Badge>
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>Total Orders</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? <LoadingSpinner /> : filteredStats.totalOrders}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.orders.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.orders.percentage}%
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <CardLoadingState />
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
-                <p className="text-xs text-muted-foreground">
-                  {timeFilter === 'all' ? 'All time orders' :
-                   timeFilter === 'today' ? 'Today\'s orders' :
-                   timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
-                   {date && ' for ' + format(date, "PPP")}
-                </p>
-              </>
-            )}
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.orders.isUp ? "Order volume up" : "Order volume down"}
+              {trends.orders.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Compared to previous period
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>Average Order Value</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                `GHS ${(filteredStats.totalSales / filteredStats.totalOrders || 0).toFixed(2)}`
+              )}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.average.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.average.percentage}%
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.average.isUp ? "Higher average spend" : "Lower average spend"}
+              {trends.average.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Average basket size trend
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>MoMo Payment Rate</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                `${((orders.filter(o => o.payment_method === 'momo').length / orders.length) * 100 || 0).toFixed(1)}%`
+              )}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.momo.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.momo.percentage}%
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.momo.isUp ? "MoMo adoption rising" : "MoMo usage declining"}
+              {trends.momo.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Mobile Money vs Cash payments
+            </p>
           </CardContent>
         </Card>
       </div>
+      <ChartAreaInteractive />
 
       <Card>
         <CardHeader>
@@ -367,10 +573,11 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Table */}
-            <div className="relative overflow-x-auto rounded-md border">
-              <Table>
+            <div className="relative overflow-x-auto rounded-md border ">
+              <style>{tableStyles}</style>
+              <Table className="table-dividers">
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/50">
                     <TableHead>Order ID</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Amount</TableHead>

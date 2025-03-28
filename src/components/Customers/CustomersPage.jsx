@@ -23,6 +23,19 @@ import {
 } from "@/components/ui/pagination";
 import { LoadingSpinner, TableLoadingState, CardLoadingState } from "@/components/ui/loading";
 
+const tableStyles = `
+  .table-dividers th,
+  .table-dividers td {
+    border-right: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .table-dividers th:last-child,
+  .table-dividers td:last-child {
+    border-right: none;
+
+  }
+`;
+
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [summary, setSummary] = useState({
@@ -80,9 +93,9 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Customer Management</h1>
-        <div className="flex items-center gap-2">
+      <style>{tableStyles}</style>
+      <div className="">
+        <div className="flex items-end justify-end gap-2">
           {isLoading && (
             <div className="flex items-center">
               <LoadingSpinner size="sm" className="mr-2" />
@@ -103,7 +116,7 @@ export default function CustomersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <Badge>
+            <Badge variant="outline">
               {isLoading ? <LoadingSpinner size="sm" /> : summary.total_registered}
             </Badge>
           </CardHeader>
@@ -141,7 +154,7 @@ export default function CustomersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactive Customers</CardTitle>
-            <Badge variant="secondary">
+            <Badge variant="outline">
               {isLoading ? <LoadingSpinner size="sm" /> : summary.without_orders}
             </Badge>
           </CardHeader>
@@ -183,15 +196,15 @@ export default function CustomersPage() {
         </CardHeader>
         <CardContent>
           <div className="relative overflow-x-auto rounded-md border">
-            <Table>
+            <Table className="table-dividers">
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact Info</TableHead>
-                  <TableHead>Registration Date</TableHead>
-                  <TableHead>Orders</TableHead>
-                  <TableHead>Total Spent</TableHead>
-                  <TableHead>Last Order</TableHead>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="text-center">Name</TableHead>
+                  <TableHead className="text-center">Contact Info</TableHead>
+                  <TableHead className="text-center">Registration Date</TableHead>
+                  <TableHead className="text-center">Orders</TableHead>
+                  <TableHead className="text-center">Total Spent</TableHead>
+                  <TableHead className="text-center">Last Order</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,17 +219,17 @@ export default function CustomersPage() {
                 ) : (
                   currentCustomers.map(customer => (
                     <TableRow key={customer.user_id}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell>
+                      <TableCell className="">{customer.name}</TableCell>
+                      <TableCell className="">
                         <div className="text-sm">
                           <div>{customer.email}</div>
                           <div className="text-muted-foreground">{customer.phone_number}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         {new Date(customer.created_at).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <div className="text-sm">
                           <div>Total: {customer.customer_stats.total_orders}</div>
                           <div className="text-muted-foreground">
@@ -224,18 +237,26 @@ export default function CustomersPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         GHS {customer.customer_stats.total_spent.toFixed(2)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         {customer.customer_stats.last_order_date ? (
                           <div className="text-sm">
                             <div>{new Date(customer.customer_stats.last_order_date).toLocaleDateString()}</div>
                             <Badge variant={
                               customer.customer_stats.last_order_status === 'completed' ? 'success' :
                               customer.customer_stats.last_order_status === 'unprocessed' ? 'warning' :
+                              customer.customer_stats.last_order_status === 'cancelled' ? 'destructive' :
                               'secondary'
-                            }>
+                            }
+                            className={
+                              customer.customer_stats.last_order_status === 'completed' ? 'border-green-300 bg-green-50 text-green-500 capitalize rounded-sm' :
+                              customer.customer_stats.last_order_status === 'unprocessed' ? 'border-yellow-300 bg-yellow-50 text-yellow-500 capitalize rounded-sm' :
+                              customer.customer_stats.last_order_status === 'cancelled' ? 'border-red-300 bg-red-50 text-red-500 capitalize rounded-sm' :
+                              'border-gray-300 bg-gray-50 text-gray-500 capitalize rounded-sm'
+                            }
+                            >
                               {customer.customer_stats.last_order_status}
                             </Badge>
                           </div>

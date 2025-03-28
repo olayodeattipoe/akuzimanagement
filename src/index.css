@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap');
+
 
 @tailwind base;
 @tailwind components;
@@ -84,6 +86,10 @@
   }
 }
 
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
 .hide-scrollbar {
   -ms-overflow-style: none; /* Internet Explorer 10+ */
   scrollbar-width: none; /* Firefox */
@@ -118,4 +124,15 @@
 .scrollable-container {
   max-height: 270px; /* Adjust the height as needed */
   overflow-y: auto;
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
