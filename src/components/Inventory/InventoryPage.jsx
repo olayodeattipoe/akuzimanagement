@@ -1,13 +1,17 @@
+"use client"
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import { InfoIcon, MoreHorizontal } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import StockRuleModal from "./StockRuleModal";
-import { Plus, Trash2, Edit, MoreVertical } from "lucide-react";
+import { Plus, Trash2, Edit, MoreVertical, Search, Filter } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -17,29 +21,389 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { API_CONFIG } from "@/config/constants";
+import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
-export default function StockInventory() {
+// Mock data for food categories and their items with individual percentages
+const foodCategories = [
+  {
+    id: "products",
+    title: "Products",
+    percentage: 88,
+    items: [
+      { name: "Waakye", percentage: 92 },
+      { name: "Jollof", percentage: 85 },
+      { name: "Fried Rice", percentage: 90 },
+      { name: "Plain Rice", percentage: 78 },
+    ],
+  },
+  {
+    id: "custom-options",
+    title: "Custom Options",
+    percentage: 75,
+    items: [
+      { name: "Eggs", percentage: 95 },
+      { name: "Salad", percentage: 65 },
+      { name: "Gari", percentage: 80 },
+      { name: "Macroni", percentage: 70 },
+      { name: "Sausage", percentage: 60 },
+      { name: "Chicken", percentage: 55 },
+    ],
+  },
+  {
+    id: "transformables",
+    title: "Transformables",
+    percentage: 92,
+    items: [
+      { name: "Raw rice", percentage: 95 },
+      { name: "Oil", percentage: 88 },
+      { name: "Salt", percentage: 98 },
+      { name: "Beans", percentage: 85 },
+    ],
+  },
+];
+
+function CapacityIndicator({ percentage }) {
+  const getColor = (index) => {
+    if (percentage >= 80) {
+      return index < 3 ? "bg-emerald-500" : index < 5 ? "bg-emerald-300" : index < 7 ? "bg-yellow-400" : "bg-red-400";
+    } else if (percentage >= 60) {
+      return index < 2 ? "bg-emerald-500" : index < 4 ? "bg-emerald-300" : index < 6 ? "bg-yellow-400" : "bg-red-400";
+    } else if (percentage >= 40) {
+      return index < 1 ? "bg-emerald-500" : index < 3 ? "bg-emerald-300" : index < 5 ? "bg-yellow-400" : "bg-red-400";
+    } else {
+      return index < 2 ? "bg-yellow-400" : "bg-red-400";
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-[2px] justify-center">
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className={`h-[3px] w-6 ${getColor(i, percentage)}`} />
+      ))}
+    </div>
+  );
+}
+
+function CategoryTab({ title, percentage }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span>{title}</span>
+      <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium">
+        {percentage}%
+      </span>
+    </div>
+  );
+}
+
+function AddTransformablesDialog({ open, onOpenChange }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    unit: 'kg'
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle form submission here
+    console.log('Form submitted:', formData);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Transformable</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name of Transformable</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter transformable name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="unit">Unit of Measurement</Label>
+            <Select
+              value={formData.unit}
+              onValueChange={(value) => setFormData({ ...formData, unit: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="kg">Kilogram (kg)</SelectItem>
+                <SelectItem value="g">Gram (g)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add Transformable</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddIndirectProductDialog({ open, onOpenChange, transformables }) {
+  const [selectedTransformable, setSelectedTransformable] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle form submission here
+    console.log('Selected transformable:', selectedTransformable);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add Indirect Product</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="transformable">Select Transformable</Label>
+            <Select
+              value={selectedTransformable}
+              onValueChange={setSelectedTransformable}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a transformable" />
+              </SelectTrigger>
+              <SelectContent>
+                {transformables.map((item) => (
+                  <SelectItem key={item.name} value={item.name}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add Product</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ItemDetailsTable({ item, isBatchMode }) {
+  const [isAddIndirectOpen, setIsAddIndirectOpen] = useState(false);
+  const transformables = foodCategories.find(cat => cat.id === 'transformables')?.items || [];
+
+  return (
+    <div className="mt-8 bg-white rounded-lg border">
+      <div className="px-6 py-4 border-b flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Ingredients List</h3>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input 
+              placeholder="Search ingredients..." 
+              className="pl-9 w-[300px]"
+            />
+          </div>
+          <Button 
+            variant="default" 
+            className="flex items-center gap-2"
+            onClick={() => setIsAddIndirectOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Add Other Indirect Products
+          </Button>
+        </div>
+      </div>
+      <AddIndirectProductDialog
+        open={isAddIndirectOpen}
+        onOpenChange={setIsAddIndirectOpen}
+        transformables={transformables}
+      />
+      <div className="p-6">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {isBatchMode ? (
+                  <>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Quantity Deducted Per Order</TableHead>
+                    <TableHead>Total Quantity Per Bag</TableHead>
+                    <TableHead>Total Number of Bags</TableHead>
+                    <TableHead>Total Quantity in Units</TableHead>
+                    <TableHead>Unit Measurement</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </>
+                ) : (
+                  <>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Quantity Deducted Per Order</TableHead>
+                    <TableHead>Total Quantity Per Batch</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                {isBatchMode ? (
+                  <>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>0.5 kg</TableCell>
+                    <TableCell>5 kg</TableCell>
+                    <TableCell>300 bags</TableCell>
+                    <TableCell>1500 kg</TableCell>
+                    <TableCell>kg</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={item.percentage > 20 ? "success" : "destructive"}
+                        className="bg-green-50 text-green-700 hover:bg-green-50"
+                      >
+                        {item.percentage > 20 ? "In Stock" : "Low Stock"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </>
+                ) : (
+                  <>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>0.5 kg</TableCell>
+                    <TableCell>5 kg</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </>
+                )}
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ItemCard({ name, percentage, onClick, isSelected }) {
+  return (
+    <Card 
+      className={cn(
+        "bg-white shadow-sm cursor-pointer transition-all",
+        isSelected ? "ring-2 ring-primary" : "hover:shadow-md"
+      )}
+      onClick={onClick}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-medium text-sm">{name}</h3>
+          <CapacityIndicator percentage={percentage} />
+        </div>
+        <div className="text-3xl font-bold text-gray-900">{percentage}%</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OverallCard() {
+  return (
+    <Card className="bg-white shadow-sm">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-medium text-gray-700">Overall Inventory</span>
+            <InfoIcon className="h-4 w-4 text-gray-400" />
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">More options</span>
+          </Button>
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <div className="text-5xl font-bold text-gray-900">82%</div>
+          <CapacityIndicator percentage={82} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function InventoryPage() {
   const [stocks, setStocks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  // For recording purchases
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  // For editing stock records
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isStockRuleDualogOpen, setIsStockRuleDialogOpen] = useState(false);
-  // State for recording a new purchase.
-  // Updated to include supplier_id.
   const [newPurchase, setNewPurchase] = useState({
     product_id: "",
     supplier_id: "",
     quantity: 0,
     unit_price: 0,
   });
-  // State for editing a stock record.
   const [selectedStock, setSelectedStock] = useState(null);
-  // State for the list of products (for the dropdown)
   const [products, setProducts] = useState([]);
-  // State for the list of suppliers (for the dropdown)
   const [suppliers, setSuppliers] = useState([]);
+  const [activeTab, setActiveTab] = useState("products");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isBatchMode, setIsBatchMode] = useState(true);
+  const [isAddTransformableOpen, setIsAddTransformableOpen] = useState(false);
+
+  // Calculate category percentages and organize items
+  const getCategoryData = () => {
+    const categories = {
+      Products: { items: [], percentage: 0 },
+      "Custom Options": { items: [], percentage: 0 },
+      Transformables: { items: [], percentage: 0 }
+    };
+
+    stocks.forEach(stock => {
+      const percentage = Math.round((stock.quantity_remaining / stock.quantity_received) * 100);
+      const item = {
+        name: stock.product_name,
+        percentage,
+        ...stock
+      };
+
+      // Categorize based on your existing data structure
+      if (stock.category === "Products") {
+        categories.Products.items.push(item);
+      } else if (stock.category === "Custom Options") {
+        categories["Custom Options"].items.push(item);
+      } else if (stock.category === "Transformables") {
+        categories.Transformables.items.push(item);
+      }
+    });
+
+    // Calculate average percentage for each category
+    Object.keys(categories).forEach(key => {
+      const items = categories[key].items;
+      if (items.length > 0) {
+        categories[key].percentage = Math.round(
+          items.reduce((sum, item) => sum + item.percentage, 0) / items.length
+        );
+      }
+    });
+
+    return categories;
+  };
 
   useEffect(() => {
     fetchStocks();
@@ -82,7 +446,6 @@ export default function StockInventory() {
     }
   };
 
-  // New function to fetch suppliers
   const fetchSuppliers = async () => {
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
@@ -101,7 +464,6 @@ export default function StockInventory() {
 
   const handlePurchases = async (e) => {
     e.preventDefault();
-    // Compute total cost based on quantity and unit price
     const computedTotalCost = newPurchase.quantity * newPurchase.unit_price;
     try {
       await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
@@ -122,7 +484,6 @@ export default function StockInventory() {
   };
 
   const handleEditStock = (stock) => {
-    // Open the edit dialog and pre-fill with the selected stock data.
     setSelectedStock(stock);
     setIsEditDialogOpen(true);
   };
@@ -131,13 +492,11 @@ export default function StockInventory() {
     setSelectedStock(stock);
     setIsStockRuleDialogOpen(true);
   };
-  
 
   const handleUpdateStock = async (e) => {
     e.preventDefault();
     if (!selectedStock) return;
 
-    // Compute quantity_remaining from the updated values.
     const updatedStock = {
       ...selectedStock,
       quantity_remaining: Number(selectedStock.quantity_received) - Number(selectedStock.quantity_sold),
@@ -155,7 +514,6 @@ export default function StockInventory() {
     }
   };
 
-
    const handleDeleteStock = async (stockId) => {
     try {
       await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
@@ -168,222 +526,106 @@ export default function StockInventory() {
     }
   };
 
-  // Compute the total cost for display purposes
-  const totalCost = newPurchase.quantity * newPurchase.unit_price;
+  const categoryData = getCategoryData();
+
+  // Filter items based on search query
+  const filteredItems = categoryData[activeTab]?.items.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header and Record Purchases Dialog */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Stock Records</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Record Purchases
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New Purchase - Select Product & Supplier</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handlePurchases} className="space-y-4">
-              {/* Product dropdown */}
-              <Select
-                value={newPurchase.product_id ? String(newPurchase.product_id) : ""}
-                onValueChange={(value) =>
-                  setNewPurchase({ ...newPurchase, product_id: value })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={String(product.id)}>
-                      {product.name} - {product.category?.name || "No Category"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <main className="absolute inset-0 left-[240px] right-0 overflow-auto bg-white">
+      <div className="min-h-full w-full">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-white border-b">
+          <div className="px-8 py-6">
+            <h1 className="text-3xl font-bold text-gray-900">Restaurant Inventory</h1>
+          </div>
+        </header>
 
-              {/* Supplier dropdown */}
-              <Select
-                value={newPurchase.supplier_id ? String(newPurchase.supplier_id) : ""}
-                onValueChange={(value) =>
-                  setNewPurchase({ ...newPurchase, supplier_id: value })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={String(supplier.id)}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Main Content */}
+        <div className="px-8 py-6">
+          <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="sticky top-[88px] z-40 bg-white">
+              <TabsList className="w-full flex bg-transparent p-0 justify-start border-b">
+                {foodCategories.map((category) => (
+                  <TabsTrigger
+                    key={category.id}
+                    value={category.id}
+                    className={cn(
+                      "data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none px-6 py-3",
+                      "data-[state=active]:bg-transparent hover:bg-gray-50 text-base",
+                    )}
+                  >
+                    <CategoryTab title={category.title} percentage={category.percentage} />
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
-              {/* Quantity Input */}
-              <Input
-                type="number"
-                placeholder="Quantity Purchased"
-                value={newPurchase.quantity}
-                onChange={(e) =>
-                  setNewPurchase({ ...newPurchase, quantity: Number(e.target.value) })
-                }
-                required
-              />
-              {/* Unit Price Input */}
-              <Input
-                type="number"
-                placeholder="Unit Price"
-                value={newPurchase.unit_price}
-                onChange={(e) =>
-                  setNewPurchase({ ...newPurchase, unit_price: Number(e.target.value) })
-                }
-                required
-              />
-              {/* Display Computed Total Cost */}
-              <p>Total Cost: ${totalCost.toFixed(2)}</p>
-              <Button type="submit" className="w-full">
-                Add Purchase
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            {foodCategories.map((category) => (
+              <TabsContent
+                key={category.id}
+                value={category.id}
+                className="animate-in fade-in-50 data-[state=active]:animate-in"
+              >
+                {category.id === 'transformables' && (
+                  <div className="flex justify-end mb-6">
+                    <Button 
+                      variant="default" 
+                      size="lg" 
+                      className="flex items-center gap-2"
+                      onClick={() => setIsAddTransformableOpen(true)}
+                    >
+                      <Plus className="h-5 w-5" />
+                      Add Transformables
+                    </Button>
+                  </div>
+                )}
+                <AddTransformablesDialog
+                  open={isAddTransformableOpen}
+                  onOpenChange={setIsAddTransformableOpen}
+                />
+                <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {category.items.map((item) => (
+                    <ItemCard 
+                      key={item.name} 
+                      name={item.name} 
+                      percentage={item.percentage}
+                      onClick={() => setSelectedItem(item)}
+                      isSelected={selectedItem?.name === item.name}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+
+          {selectedItem && (
+            <div className="mt-8">
+              <div className="sticky top-[144px] z-30 bg-white py-4 border-b">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="mode-toggle"
+                    checked={isBatchMode}
+                    onCheckedChange={setIsBatchMode}
+                  />
+                  <Label htmlFor="mode-toggle" className="font-medium">
+                    {isBatchMode ? 'Batch Mode' : 'Individual Mode'}
+                  </Label>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <ItemDetailsTable 
+                  item={selectedItem}
+                  isBatchMode={isBatchMode}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Stock Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Stock Inventory</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Quantity Received</TableHead>
-                <TableHead>Quantity Sold</TableHead>
-                <TableHead>Quantity Remaining</TableHead>
-                <TableHead>Unit Price</TableHead>
-                <TableHead>Total Value</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : stocks.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center">
-                    No stock records found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                stocks.map((stock) => {
-                  const totalValue = stock.unit_price
-                    ? (stock.quantity_remaining * Number(stock.base_price)).toFixed(2)
-                    : "0.00";
-                  return (
-                    <TableRow key={stock.id}>
-                      <TableCell>{stock.product_name || "N/A"}</TableCell>
-                      <TableCell>{stock.quantity_received}</TableCell>
-                      <TableCell>{stock.quantity_sold}</TableCell>
-                      <TableCell>{stock.quantity_remaining}</TableCell>
-                      <TableCell>${stock.base_price}</TableCell>
-                      <TableCell>${totalValue}</TableCell>
-                      <TableCell>
-                        <Badge variant={stock.quantity_remaining > 10 ? "success" : "destructive"}>
-                          {stock.quantity_remaining > 10 ? "In Stock" : "Low Stock"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditStock(stock)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Stock
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteStock(stock.id)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Stock
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStockRule(stock)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Stock Rule
-                              </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Edit Stock Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Stock</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpdateStock} className="space-y-4">
-            <Input
-              placeholder="Item Name"
-              value={selectedStock?.product_name || ""}
-              onChange={(e) =>
-                setSelectedStock({ ...selectedStock, product_name: e.target.value })
-              }
-              required
-            />
-            <Input
-              type="number"
-              placeholder="Quantity Received"
-              value={selectedStock?.quantity_received || ""}
-              onChange={(e) =>
-                setSelectedStock({ ...selectedStock, quantity_received: Number(e.target.value) })
-              }
-              required
-            />
-            <Input
-              type="number"
-              placeholder="Quantity Sold"
-              value={selectedStock?.quantity_sold || ""}
-              onChange={(e) =>
-                setSelectedStock({ ...selectedStock, quantity_sold: Number(e.target.value) })
-              }
-              required
-            />
-            <Button type="submit" className="w-full">
-              Update Stock
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-
-      {/* Edit Stock Dialog */
-        isStockRuleDualogOpen && selectedStock && (
-          <StockRuleModal product={selectedStock} onClose={() => setIsStockRuleDialogOpen(false)} />
-      )}
-      
-    </div>
+    </main>
   );
 }
