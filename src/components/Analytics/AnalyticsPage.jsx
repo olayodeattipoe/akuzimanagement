@@ -181,16 +181,16 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
+    <div className="w-full p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Sales Analytics</h1>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-[200px] justify-start text-left font-normal",
+                  "justify-start text-left font-normal",
                   !date && "text-muted-foreground"
                 )}
               >
@@ -198,38 +198,19 @@ export default function AnalyticsPage() {
                 {date ? format(date, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0">
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={(newDate) => {
-                  setDate(newDate);
-                  setTimeFilter('all'); // Reset time filter when specific date is selected
-                }}
+                onSelect={setDate}
                 initialFocus
               />
             </PopoverContent>
           </Popover>
-          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+          
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Payment Method" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Payments</SelectItem>
-              <SelectItem value="cash">Cash Only</SelectItem>
-              <SelectItem value="momo">Mobile Money Only</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select 
-            value={timeFilter} 
-            onValueChange={(value) => {
-              setTimeFilter(value);
-              setDate(null); // Reset date when time filter changes
-            }}
-            disabled={!!date} // Disable time filter when specific date is selected
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time period" />
+              <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Time</SelectItem>
@@ -238,32 +219,41 @@ export default function AnalyticsPage() {
               <SelectItem value="month">Last 30 Days</SelectItem>
             </SelectContent>
           </Select>
+          
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select payment type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payments</SelectItem>
+              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="momo">Mobile Money</SelectItem>
+              <SelectItem value="card">Card</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Stats Cards - Now using filteredStats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 mb-6">
+        <Card className="w-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <Badge variant="success">
-              GHS {filteredStats.totalSales.toFixed(2)}
-            </Badge>
+            <Badge variant="default">GHS {filteredStats.totalSales.toFixed(2)}</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">GHS {filteredStats.totalSales.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              {timeFilter === 'all' ? 'All time sales' :
-               timeFilter === 'today' ? 'Today\'s sales' :
+              {timeFilter === 'all' ? 'All time sales' : 
+               timeFilter === 'today' ? 'Today\'s sales' : 
                timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
             </p>
           </CardContent>
         </Card>
-
-        <Card>
+        
+        <Card className="w-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge>{filteredStats.totalOrders}</Badge>
+            <Badge variant="default">{filteredStats.totalOrders}</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
@@ -272,7 +262,7 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Sales History</CardTitle>
         </CardHeader>

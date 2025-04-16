@@ -41,16 +41,12 @@ export function NewDashboard() {
   }
   
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="flex h-16 items-center border-b px-4 bg-background">
+    <div className="min-h-screen flex flex-col bg-background w-full">
+      <header className="sticky top-0 z-50 flex h-16 items-center border-b px-4 bg-background w-full">
         <AppSidebar />
       </header>
-      <main className="flex-1 w-full overflow-auto">
-        <div className="container mx-auto h-full flex items-start justify-center p-6">
-          <div className="w-full">
-            {getPageContent()}
-          </div>
-        </div>
+      <main className="flex-1 w-full">
+        {getPageContent()}
       </main>
     </div>
   )
