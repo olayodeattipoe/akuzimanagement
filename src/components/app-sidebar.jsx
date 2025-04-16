@@ -58,26 +58,28 @@ export function AppSidebar() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] p-0">
-        <div className="border-b p-4">
-          <div className="flex items-center gap-2">
-            <GalleryVerticalEnd className="h-6 w-6" />
-            <span className="font-semibold">Restaurant Admin</span>
+        <div className="flex flex-col h-[100dvh]">
+          <div className="border-b p-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <GalleryVerticalEnd className="h-6 w-6" />
+              <span className="font-semibold">Restaurant Admin</span>
+            </div>
           </div>
+          <nav className="flex-1 flex flex-col p-2 overflow-y-auto">
+            {menuItems.map((item) => (
+              <Link 
+                key={item.title} 
+                to={item.url}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent ${
+                  location.pathname === item.url ? 'bg-accent' : ''
+                }`}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.title}
+              </Link>
+            ))}
+          </nav>
         </div>
-        <nav className="flex flex-col p-2">
-          {menuItems.map((item) => (
-            <Link 
-              key={item.title} 
-              to={item.url}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent ${
-                location.pathname === item.url ? 'bg-accent' : ''
-              }`}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.title}
-            </Link>
-          ))}
-        </nav>
       </SheetContent>
     </Sheet>
   )

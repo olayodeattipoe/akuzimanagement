@@ -107,10 +107,10 @@ export default function ServersPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="w-full p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Servers Management</h1>
-        <div className="space-x-4">
+        <div className="flex flex-wrap gap-4">
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -181,12 +181,12 @@ export default function ServersPage() {
         </div>
       </div>
 
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Active Servers</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative overflow-x-auto rounded-md border">
+          <div className="relative overflow-x-auto rounded-md border w-full">
             <table className="w-full text-sm text-left">
               <thead className="text-xs uppercase bg-muted">
                 <tr>
