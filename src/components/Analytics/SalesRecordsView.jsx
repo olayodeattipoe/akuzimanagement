@@ -10,9 +10,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-export default function SalesRecordsView({ isLoading, onItemSelect }) {
+export default function SalesRecordsView({ isLoading: parentLoading, selectedItem }) {
   const [salesRecords, setSalesRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState({
     item_type: "product",
     item_id: "",
@@ -79,46 +81,35 @@ export default function SalesRecordsView({ isLoading, onItemSelect }) {
     console.log('SalesRecordsView - Option Choices Updated:', optionChoices);
   }, [optionChoices]);
 
-  // Fetch sales records when filters change
-  useEffect(() => {
-    const fetchSalesRecords = async () => {
-      if (!filters.item_id) {
-        console.log('SalesRecordsView - No item selected, skipping sales records fetch');
-        return;
-      }
-
-      console.log('SalesRecordsView - Fetching sales records with filters:', filters);
-      try {
-        const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
-          action: "get_sales_records",
-          content: {
-            item_type: filters.item_type,
-            item_id: filters.item_id ? parseInt(filters.item_id) : null,
-            start_date: filters.start_date ? filters.start_date.toISOString() : null,
-            end_date: filters.end_date ? filters.end_date.toISOString() : null
-          }
-        });
-
-        console.log('SalesRecordsView - Sales Records Response:', response.data);
-        if (Array.isArray(response.data)) {
-          setSalesRecords(response.data);
+  const fetchSalesRecords = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+        action: "get_sales_records",
+        content: {
+          item_id: selectedItem?.id || null,
+          mode: "all"
         }
-      } catch (error) {
-        console.error('SalesRecordsView - Error fetching sales records:', error);
-        console.error('SalesRecordsView - Error details:', {
-          message: error.message,
-          response: error.response?.data
-        });
+      });
+      
+      if (Array.isArray(response.data)) {
+        setSalesRecords(response.data);
+      } else {
+        console.error("Unexpected sales records format:", response.data);
+        toast.error("Failed to load sales records. Unexpected data format.");
       }
-    };
+    } catch (error) {
+      console.error("Error fetching sales records:", error);
+      toast.error("Failed to load sales records. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchSalesRecords();
-  }, [filters]);
-
-  // Log sales records when they change
+  // Fetch sales records when selectedItem changes
   useEffect(() => {
-    console.log('SalesRecordsView - Sales Records Updated:', salesRecords);
-  }, [salesRecords]);
+    fetchSalesRecords();
+  }, [selectedItem]);
 
   const handleItemTypeChange = (value) => {
     console.log('SalesRecordsView - Item Type Changed:', value);
@@ -133,7 +124,23 @@ export default function SalesRecordsView({ isLoading, onItemSelect }) {
     
     console.log('SalesRecordsView - Found Item:', item);
     setFilters({ ...filters, item_id: value });
-    onItemSelect(item ? { ...item, type: filters.item_type } : null);
+  };
+
+  const formatDate = (dateStr) => {
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(dateStr));
+  };
+
+  const formatCurrency = (amount) => {
+    return `GH₵${new Intl.NumberFormat('en-GH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount)}`;
   };
 
   return (
@@ -247,53 +254,43 @@ export default function SalesRecordsView({ isLoading, onItemSelect }) {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Order ID</TableHead>
               <TableHead>Item</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Unit Price</TableHead>
               <TableHead>Total</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead>Payment Method</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {(isLoading || parentLoading) ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-4">
+                <TableCell colSpan={6} className="text-center py-8">
                   Loading sales records...
                 </TableCell>
               </TableRow>
             ) : salesRecords.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-4">
-                  No sales records found.
+                <TableCell colSpan={6} className="text-center py-8">
+                  {selectedItem ? 
+                    `No sales records found for ${selectedItem.name}` :
+                    "No sales records found. Select an item to view its sales history."
+                  }
                 </TableCell>
               </TableRow>
             ) : (
               salesRecords.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell>{new Date(record.timestamp).toLocaleDateString()}</TableCell>
-                  <TableCell>{record.order_uuid}</TableCell>
+                  <TableCell>{formatDate(record.sale_date)}</TableCell>
                   <TableCell>
-                    {record.item.name}
-                    {record.item.type === 'option_choice' && (
-                      <span className="text-gray-500 text-sm block">
-                        {record.item.option_name}
-                      </span>
-                    )}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{record.item.name}</span>
+                      <span className="text-xs text-gray-500">{record.item.type}</span>
+                    </div>
                   </TableCell>
                   <TableCell>{record.quantity}</TableCell>
-                  <TableCell>GH₵{record.unit_price.toFixed(2)}</TableCell>
-                  <TableCell>GH₵{record.total_price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <span className={cn(
-                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                      record.item.type === 'product' 
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-purple-50 text-purple-700"
-                    )}>
-                      {record.item.type === 'product' ? 'Product' : 'Option'}
-                    </span>
-                  </TableCell>
+                  <TableCell>{formatCurrency(record.unit_price)}</TableCell>
+                  <TableCell>{formatCurrency(record.total_amount)}</TableCell>
+                  <TableCell>{record.payment_method}</TableCell>
                 </TableRow>
               ))
             )}
