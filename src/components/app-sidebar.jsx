@@ -1,5 +1,5 @@
 import * as React from "react"
-import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2, UserCircle } from "lucide-react"
+import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2, UserCircle, ShoppingBag, TrendingUp } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sheet,
@@ -26,6 +26,11 @@ const menuItems = [
     icon: BarChart,
   },
   {
+    title: "Sales Analytics",
+    url: "/sales-analytics",
+    icon: TrendingUp,
+  },
+  {
     title: "Monitoring",
     url: "/monitoring",
     icon: LineChart,
@@ -44,6 +49,11 @@ const menuItems = [
     title: "Inventory",
     url: "/inventory",
     icon: LineChart,
+  },
+  {
+    title: "Suppliers",
+    url: "/suppliers",
+    icon: ShoppingBag,
   },
 ]
 

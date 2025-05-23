@@ -18,10 +18,6 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
     const [pricingType, setPricingType] = useState('FIX')
     const [picture, setPicture] = useState('')
 
-    // New fields
-    const [maxAccompaniments, setMaxAccompaniments] = useState('')
-    const [unitOfMeasurement, setUnitOfMeasurement] = useState('')
-    const [batchNumber, setBatchNumber] = useState('')
 
     const unitOptions = ["kg", "g", "L", "mL", "pcs", "box"] // Example unit options
 
@@ -56,9 +52,6 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
         setBasePrice('')
         setPricingType('FIX')
         setPicture('')
-        setMaxAccompaniments('')
-        setUnitOfMeasurement('')
-        setBatchNumber('')
     }
 
     const handleSubmit = (e) => {
@@ -77,9 +70,6 @@ export default function AddProductDialog({ categories, setarray_to_be_added }) {
             'is_available': true,
             'category': category,
             'image_url': picture,
-            //'max_accompaniments': maxAccompaniments,
-            //'unit_of_measurement': unitOfMeasurement,
-            //'batch_number': batchNumber,
         }
 
         const handleSend = async () => {
