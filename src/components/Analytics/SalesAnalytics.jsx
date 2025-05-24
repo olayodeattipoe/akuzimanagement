@@ -66,6 +66,7 @@ export default function SalesAnalytics() {
             <CardContent className="pt-6">
               <TopSellersView 
                 isLoading={isLoading}
+                onItemSelect={handleItemSelect}
               />
             </CardContent>
           </Card>

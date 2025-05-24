@@ -11,8 +11,9 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
-export default function SalesRecordsView({ isLoading: parentLoading, selectedItem }) {
+export default function SalesRecordsView({ isLoading: parentLoading, onItemSelect }) {
   const [salesRecords, setSalesRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState({
@@ -50,14 +51,25 @@ export default function SalesRecordsView({ isLoading: parentLoading, selectedIte
           setProducts(productsResponse.data);
         }
 
-        // Fetch option choices
+        // Fetch option choices with their parent option names
         console.log('SalesRecordsView - Fetching option choices...');
         const optionsResponse = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
           action: "return_inventory_products",
           content: { mode: "custom_options" }
         });
         console.log('SalesRecordsView - Option Choices Response:', optionsResponse.data);
+        
         if (Array.isArray(optionsResponse.data)) {
+          // Add debug logging for option choice structure
+          optionsResponse.data.forEach(option => {
+            console.log('Option Choice Structure:', {
+              id: option.id,
+              choice_name: option.choice_name,
+              name: option.name,
+              option_name: option.option_name,
+              customizable_option: option.customizable_option
+            });
+          });
           setOptionChoices(optionsResponse.data);
         }
       } catch (error) {
@@ -66,6 +78,7 @@ export default function SalesRecordsView({ isLoading: parentLoading, selectedIte
           message: error.message,
           response: error.response?.data
         });
+        toast.error("Failed to load items. Please try again.");
       }
     };
 
@@ -84,15 +97,25 @@ export default function SalesRecordsView({ isLoading: parentLoading, selectedIte
   const fetchSalesRecords = async () => {
     setIsLoading(true);
     try {
+      // Only fetch if an item is selected
+      if (!filters.item_id) {
+        setSalesRecords([]);
+        return;
+      }
+
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: "get_sales_records",
         content: {
-          item_id: selectedItem?.id || null,
+          item_id: filters.item_id,
+          item_type: filters.item_type,
+          start_date: filters.start_date ? format(filters.start_date, 'yyyy-MM-dd') : null,
+          end_date: filters.end_date ? format(filters.end_date, 'yyyy-MM-dd') : null,
           mode: "all"
         }
       });
       
       if (Array.isArray(response.data)) {
+        console.log('Sales Records Data:', response.data);
         setSalesRecords(response.data);
       } else {
         console.error("Unexpected sales records format:", response.data);
@@ -106,10 +129,26 @@ export default function SalesRecordsView({ isLoading: parentLoading, selectedIte
     }
   };
 
-  // Fetch sales records when selectedItem changes
+  // Calculate totals
+  const calculateTotals = () => {
+    if (!salesRecords.length) return { totalQuantity: 0, totalAmount: 0, averagePrice: 0 };
+    
+    const totals = salesRecords.reduce((acc, record) => {
+      acc.totalQuantity += record.quantity;
+      acc.totalAmount += record.total_price;
+      return acc;
+    }, { totalQuantity: 0, totalAmount: 0 });
+    
+    totals.averagePrice = totals.totalAmount / totals.totalQuantity;
+    return totals;
+  };
+
+  // Update useEffect to watch date filters as well
   useEffect(() => {
     fetchSalesRecords();
-  }, [selectedItem]);
+  }, [filters.item_id, filters.item_type, filters.start_date, filters.end_date]);
+
+  const totals = calculateTotals();
 
   const handleItemTypeChange = (value) => {
     console.log('SalesRecordsView - Item Type Changed:', value);
@@ -124,16 +163,37 @@ export default function SalesRecordsView({ isLoading: parentLoading, selectedIte
     
     console.log('SalesRecordsView - Found Item:', item);
     setFilters({ ...filters, item_id: value });
+    
+    // Notify parent component about the selected item
+    if (item) {
+      onItemSelect({
+        id: item.id,
+        name: filters.item_type === "product" ? item.name : (item.choice_name || item.name),
+        type: filters.item_type,
+        total_quantity: item.total_quantity,
+        base_price: item.base_price,
+        option_name: filters.item_type === "option_choice" ? item.option_name : undefined
+      });
+    }
   };
 
   const formatDate = (dateStr) => {
-    return new Intl.DateTimeFormat('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(dateStr));
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      return new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -181,7 +241,7 @@ export default function SalesRecordsView({ isLoading: parentLoading, selectedIte
                   ))
                 : optionChoices.map(option => (
                     <SelectItem key={option.id} value={option.id.toString()}>
-                      {option.name}
+                      {option.choice_name || option.name} {option.option_name ? `(${option.option_name})` : ''}
                     </SelectItem>
                   ))
               }
@@ -248,49 +308,96 @@ export default function SalesRecordsView({ isLoading: parentLoading, selectedIte
         </div>
       </div>
 
+      {/* Totals Section */}
+      {filters.item_id && salesRecords.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Total Quantity Sold</p>
+            <p className="text-2xl font-bold">{totals.totalQuantity}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Total Revenue</p>
+            <p className="text-2xl font-bold">{formatCurrency(totals.totalAmount)}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Average Price</p>
+            <p className="text-2xl font-bold">{formatCurrency(totals.averagePrice)}</p>
+          </div>
+        </div>
+      )}
+
       {/* Sales Records Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
+              <TableHead>Date & Time</TableHead>
+              <TableHead>Order ID</TableHead>
               <TableHead>Item</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Unit Price</TableHead>
               <TableHead>Total</TableHead>
-              <TableHead>Payment Method</TableHead>
+              <TableHead>Pricing Type</TableHead>
+              <TableHead>Food Type</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {(isLoading || parentLoading) ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   Loading sales records...
                 </TableCell>
               </TableRow>
             ) : salesRecords.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  {selectedItem ? 
-                    `No sales records found for ${selectedItem.name}` :
-                    "No sales records found. Select an item to view its sales history."
+                <TableCell colSpan={9} className="text-center py-8">
+                  {filters.item_id ? 
+                    `No sales records found for the selected item` :
+                    "Select an item to view its sales history."
                   }
                 </TableCell>
               </TableRow>
             ) : (
               salesRecords.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell>{formatDate(record.sale_date)}</TableCell>
+                  <TableCell>{formatDate(record.timestamp)}</TableCell>
+                  <TableCell className="font-mono text-sm">{record.order_uuid}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">{record.item.name}</span>
-                      <span className="text-xs text-gray-500">{record.item.type}</span>
+                      {record.item.type === 'option_choice' && record.item.option_name && (
+                        <span className="text-xs text-gray-500">
+                          from {record.item.option_name}
+                        </span>
+                      )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                        record.item.type === 'product'
+                          ? "bg-blue-50 text-blue-700"
+                          : "bg-purple-50 text-purple-700"
+                      )}
+                    >
+                      {record.item.type === 'product' ? 'Product' : 'Option'}
+                    </Badge>
                   </TableCell>
                   <TableCell>{record.quantity}</TableCell>
                   <TableCell>{formatCurrency(record.unit_price)}</TableCell>
-                  <TableCell>{formatCurrency(record.total_amount)}</TableCell>
-                  <TableCell>{record.payment_method}</TableCell>
+                  <TableCell>{formatCurrency(record.total_price)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {record.pricing_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {record.food_type}
+                    </Badge>
+                  </TableCell>
                 </TableRow>
               ))
             )}

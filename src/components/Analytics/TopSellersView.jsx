@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export default function TopSellersView({ isLoading }) {
+export default function TopSellersView({ isLoading: parentLoading, onItemSelect }) {
   const [topSellers, setTopSellers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [filters, setFilters] = useState({
@@ -186,7 +186,7 @@ export default function TopSellersView({ isLoading }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {parentLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-4">
                     Loading top sellers...
@@ -200,7 +200,18 @@ export default function TopSellersView({ isLoading }) {
                 </TableRow>
               ) : (
                 topSellers.map((item, index) => (
-                  <TableRow key={`${item.type}-${item.id}`}>
+                  <TableRow 
+                    key={`${item.type}-${item.id}`}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => onItemSelect({
+                      id: item.id,
+                      name: item.name,
+                      type: item.type,
+                      total_quantity: item.current_stock,
+                      base_price: item.base_price,
+                      option_name: item.option_name
+                    })}
+                  >
                     <TableCell className="font-medium">#{index + 1}</TableCell>
                     <TableCell>
                       <div>
