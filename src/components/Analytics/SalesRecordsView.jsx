@@ -183,12 +183,12 @@ export default function SalesRecordsView({ isLoading: parentLoading, onItemSelec
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return 'Invalid Date';
       
-      return new Intl.DateTimeFormat('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
       }).format(date);
     } catch (error) {
       console.error('Error formatting date:', error);

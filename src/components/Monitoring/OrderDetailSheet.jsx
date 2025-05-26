@@ -57,6 +57,10 @@ export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatu
     }, 0);
   };
 
+  const handleStatusUpdate = (newStatus) => {
+    onUpdateStatus(order.uuid, newStatus);
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
@@ -186,18 +190,18 @@ export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatu
 
             {/* Show buttons regardless of status */}
             <div className="flex justify-end space-x-2 mt-4">
-              {order.status !== 'cancelled' && (
+              {order.status !== 'canceled' && (
                 <Button
                   variant="destructive"
-                  onClick={() => onUpdateStatus(order.uuid, 'cancelled')}
+                  onClick={() => handleStatusUpdate('canceled')}
                 >
-                  {order.status === 'unprocessed' ? 'Cancel Order' : 'Mark as Cancelled'}
+                  {order.status === 'unprocessed' ? 'Cancel Order' : 'Mark as Canceled'}
                 </Button>
               )}
               {order.status !== 'completed' && (
                 <Button
                   variant="default"
-                  onClick={() => onUpdateStatus(order.uuid, 'completed')}
+                  onClick={() => handleStatusUpdate('completed')}
                 >
                   Mark as Completed
                 </Button>
@@ -205,7 +209,7 @@ export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatu
               {order.status !== 'unprocessed' && (
                 <Button
                   variant="outline"
-                  onClick={() => onUpdateStatus(order.uuid, 'unprocessed')}
+                  onClick={() => handleStatusUpdate('unprocessed')}
                 >
                   Mark as Unprocessed
                 </Button>

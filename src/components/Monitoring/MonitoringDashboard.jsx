@@ -19,7 +19,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderDetailSheet from './OrderDetailSheet';
+import CanceledOrdersView from './CanceledOrdersView';
 
 const ORDER_TYPE_CHOICES = {
   delivery: 'Delivery',
@@ -28,6 +30,7 @@ const ORDER_TYPE_CHOICES = {
 };
 
 export default function MonitoringDashboard() {
+  const [activeTab, setActiveTab] = useState('active');
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -81,6 +84,7 @@ export default function MonitoringDashboard() {
 
   const updateOrderStatus = async (orderUuid, newStatus) => {
     try {
+      console.log('Updating order status:', { orderUuid, newStatus });
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: 'update_order_status',
         content: {
@@ -89,14 +93,19 @@ export default function MonitoringDashboard() {
         }
       });
 
+      console.log('API Response:', response.data);
+
       if (response.data.status === 'success') {
         // Update the order in the local state
-        setOrders(orders.map(order => 
+        setOrders(prevOrders => prevOrders.map(order => 
           order.uuid === orderUuid 
             ? { ...order, status: newStatus }
             : order
         ));
+        fetchDashboardData(); // Refresh the data
         setIsModalOpen(false);
+      } else {
+        console.error('Failed to update status:', response.data);
       }
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -180,6 +189,13 @@ export default function MonitoringDashboard() {
         </div>
       </div>
 
+      <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="active">Active Orders</TabsTrigger>
+          <TabsTrigger value="canceled">Canceled Orders</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active">
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mb-6">
         <Card className="w-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -330,6 +346,12 @@ export default function MonitoringDashboard() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="canceled">
+          <CanceledOrdersView timeFilter={timeFilter} />
+        </TabsContent>
+      </Tabs>
 
       <OrderDetailSheet
         order={selectedOrder}
