@@ -334,7 +334,7 @@ export default function AnalyticsPage() {
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-[200px] justify-start text-left font-normal",
+                  "justify-start text-left font-normal",
                   !date && "text-muted-foreground"
                 )}
                 disabled={isLoading}
@@ -343,14 +343,11 @@ export default function AnalyticsPage() {
                 {date ? format(date, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0">
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={(newDate) => {
-                  setDate(newDate);
-                  setTimeFilter('all'); // Reset time filter when specific date is selected
-                }}
+                onSelect={setDate}
                 initialFocus
               />
             </PopoverContent>
@@ -418,8 +415,8 @@ export default function AnalyticsPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {timeFilter === 'all' ? 'All time sales' :
-               timeFilter === 'today' ? 'Today\'s sales' :
+              {timeFilter === 'all' ? 'All time sales' : 
+               timeFilter === 'today' ? 'Today\'s sales' : 
                timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
               {date && ' for ' + format(date, "PPP")}
             </p>
@@ -532,7 +529,7 @@ export default function AnalyticsPage() {
       </div>
       <ChartAreaInteractive />
 
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Sales History</CardTitle>
         </CardHeader>

@@ -4,10 +4,12 @@ import { useLocation } from 'react-router-dom'
 import CustomizeSite from './CustomizeSite'
 import ServersPage from './components/Servers/ServersPage'
 import AnalyticsPage from './components/Analytics/AnalyticsPage'
+import SalesAnalytics from './components/Analytics/SalesAnalytics'
 import MonitoringDashboard from './components/Monitoring/MonitoringDashboard'
 import POSAdminPage from './components/Admin/POSAdminPage'
 import CustomersPage from './components/Customers/CustomersPage'
 import InventoryPage from "./components/Inventory/InventoryPage"
+import {SuppliersPage}  from "./components/Suppliers/SuppliersPage"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
 
@@ -22,6 +24,8 @@ export function NewDashboard() {
         return <ServersPage />
       case '/analytics':
         return <AnalyticsPage />
+      case '/sales-analytics':
+        return <SalesAnalytics />
       case '/monitoring':
         return <MonitoringDashboard />
       case '/pos-admins':
@@ -29,7 +33,9 @@ export function NewDashboard() {
       case '/customers':
         return <CustomersPage />
       case '/inventory':
-        return <InventoryPage />
+          return <InventoryPage/>
+      case '/suppliers':
+          return <SuppliersPage/>
       default:
         return (
           <div className="p-4">

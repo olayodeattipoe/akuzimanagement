@@ -42,9 +42,19 @@ const data = {
       icon: LayoutDashboardIcon,
     },
     {
-      title: "Sales Analytics",
+      title: "Analytics",
       url: "/analytics",
       icon: BarChartIcon,
+    },
+    {
+      title: "Sales Analytics",
+      url: "/sales-analytics",
+      icon: BarChartIcon,
+    },
+    {
+      title: "Suppliers",
+      url: "/suppliers",
+      icon: ListIcon,
     },
     {
       title: "Servers",
