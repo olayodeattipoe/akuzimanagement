@@ -6,12 +6,13 @@ import ServersPage from './components/Servers/ServersPage'
 import AnalyticsPage from './components/Analytics/AnalyticsPage'
 import SalesAnalytics from './components/Analytics/SalesAnalytics'
 import MonitoringDashboard from './components/Monitoring/MonitoringDashboard'
+import Reports from './pages/Reports'
 import POSAdminPage from './components/Admin/POSAdminPage'
 import CustomersPage from './components/Customers/CustomersPage'
 import InventoryPage from "./components/Inventory/InventoryPage"
 import { SuppliersPage } from "./components/Suppliers/SuppliersPage"
 
-export function NewDashboard() {
+export function NewDashboard({ user, onLogout }) {
   const location = useLocation()
   const [control_array, setControl_array] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -26,6 +27,8 @@ export function NewDashboard() {
         return <SalesAnalytics />
       case '/monitoring':
         return <MonitoringDashboard />
+      case '/reports':
+        return <Reports />
       case '/pos-admins':
         return <POSAdminPage />
       case '/customers':
@@ -49,7 +52,7 @@ export function NewDashboard() {
   return (
     <div className="min-h-screen flex flex-col bg-background w-full">
       <header className="sticky top-0 z-50 flex h-16 items-center border-b px-4 bg-background w-full">
-        <AppSidebar />
+        <AppSidebar user={user} onLogout={onLogout} />
       </header>
       <main className="flex-1 w-full">
         {getPageContent()}

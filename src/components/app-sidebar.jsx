@@ -1,6 +1,8 @@
 import * as React from "react"
-import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2, UserCircle, ShoppingBag, TrendingUp } from "lucide-react"
+import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2, UserCircle, ShoppingBag, TrendingUp, FileText, LogOut } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
+import axios from 'axios';
+import { API_CONFIG } from '@/config/constants';
 import {
   Sheet,
   SheetContent,
@@ -36,6 +38,11 @@ const menuItems = [
     icon: LineChart,
   },
   {
+    title: "Reports",
+    url: "/reports",
+    icon: FileText,
+  },
+  {
     title: "POS Admins",
     url: "/pos-admins",
     icon: Users2,
@@ -57,8 +64,24 @@ const menuItems = [
   },
 ]
 
-export function AppSidebar() {
+export function AppSidebar({ user, onLogout }) {
   const location = useLocation()
+  
+  const handleLogout = async () => {
+    try {
+      // Call the logout endpoint using your API
+      await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+        action: 'user_logout',
+        content: {}
+      });
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Continue with logout even if API call fails
+    } finally {
+      // Always call onLogout to clear local state
+      onLogout();
+    }
+  };
   
   return (
     <Sheet>
@@ -74,6 +97,11 @@ export function AppSidebar() {
               <GalleryVerticalEnd className="h-6 w-6" />
               <span className="font-semibold">Restaurant Admin</span>
             </div>
+            {user && (
+              <div className="mt-2 text-sm text-muted-foreground">
+                Welcome, {user.first_name || user.username}
+              </div>
+            )}
           </div>
           <nav className="flex-1 flex flex-col p-2 overflow-y-auto">
             {menuItems.map((item) => (
@@ -89,6 +117,18 @@ export function AppSidebar() {
               </Link>
             ))}
           </nav>
+          {user && (
+            <div className="border-t p-2 shrink-0">
+              <Button 
+                variant="ghost" 
+                onClick={handleLogout}
+                className="w-full justify-start"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

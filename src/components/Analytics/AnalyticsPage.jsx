@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
             <SelectContent>
               <SelectItem value="all">All Payments</SelectItem>
               <SelectItem value="cash">Cash</SelectItem>
-              <SelectItem value="momo">Mobile Money</SelectItem>
+              <SelectItem value="hubtel">Hubtel</SelectItem>
               <SelectItem value="card">Card</SelectItem>
             </SelectContent>
           </Select>
