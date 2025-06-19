@@ -43,7 +43,7 @@ export default function CustomizeSite({ setSelectedCategory, selectedCategory, a
             <div className="w-full h-full">
                 <Button 
                     onClick={applychanges} 
-                    className="mb-4" 
+                    className="mb-4 hidden" 
                     variant="destructive"
                 >
                     Apply Changes

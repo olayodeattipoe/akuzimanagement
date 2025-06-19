@@ -10,15 +10,18 @@ import Reports from './pages/Reports'
 import POSAdminPage from './components/Admin/POSAdminPage'
 import CustomersPage from './components/Customers/CustomersPage'
 import InventoryPage from "./components/Inventory/InventoryPage"
+import AlertsPage from "./components/Alerts/AlertsPage"
 import { SuppliersPage } from "./components/Suppliers/SuppliersPage"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { SiteHeader } from "@/components/site-header"
 
 export function NewDashboard({ user, onLogout }) {
   const location = useLocation()
   const [control_array, setControl_array] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
-  
+
   const getPageContent = () => {
-    switch(location.pathname) {
+    switch (location.pathname) {
       case '/servers':
         return <ServersPage />
       case '/analytics':
@@ -34,29 +37,40 @@ export function NewDashboard({ user, onLogout }) {
       case '/customers':
         return <CustomersPage />
       case '/inventory':
-          return <InventoryPage/>
+        return <InventoryPage />
+      case '/alerts':
+        return <AlertsPage />
       case '/suppliers':
-          return <SuppliersPage/>
+        return <SuppliersPage />
       default:
         return (
-          <CustomizeSite 
-            selectedCategory={selectedCategory} 
-            setSelectedCategory={setSelectedCategory} 
-            array={control_array} 
-            setControl_array={setControl_array} 
-          />
+          <div className="p-4">
+            <CustomizeSite
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              array={control_array}
+              setControl_array={setControl_array}
+            />
+          </div>
         )
     }
   }
-  
+
   return (
-    <div className="min-h-screen flex flex-col bg-background w-full">
-      <header className="sticky top-0 z-50 flex h-16 items-center border-b px-4 bg-background w-full">
-        <AppSidebar user={user} onLogout={onLogout} />
-      </header>
-      <main className="flex-1 w-full">
-        {getPageContent()}
-      </main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar user={user} onLogout={onLogout} variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex-1 flex flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              {getPageContent()}
+            </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
+
+

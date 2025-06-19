@@ -183,7 +183,7 @@ export default function SalesStatsView({ selectedItem, isLoading }) {
       </Card>
 
       {/* Performance Metrics */}
-      <Card>
+      <Card className="hidden">
         <CardHeader>
           <CardTitle>Performance Metrics</CardTitle>
         </CardHeader>

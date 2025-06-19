@@ -50,11 +50,12 @@ export default function App() {
         <Route path="/analytics" element={<Dashboard user={user} onLogout={handleLogout} />} />
         <Route path="/sales-analytics" element={<Dashboard user={user} onLogout={handleLogout} />} />
         <Route path="/monitoring" element={<Dashboard user={user} onLogout={handleLogout} />} />
-        <Route path="/reports" element={<Dashboard user={user} onLogout={handleLogout} />} />
         <Route path="/pos-admins" element={<Dashboard user={user} onLogout={handleLogout} />} />
         <Route path="/customers" element={<Dashboard user={user} onLogout={handleLogout} />} />
         <Route path="/inventory" element={<Dashboard user={user} onLogout={handleLogout} />} />
         <Route path="/suppliers" element={<Dashboard user={user} onLogout={handleLogout} />} />
+        <Route path="/alerts" element={<Dashboard user={user} onLogout={handleLogout} />} />
+        <Route path="/reports" element={<Dashboard user={user} onLogout={handleLogout} />} />
       </Routes>
     </Router>
   )

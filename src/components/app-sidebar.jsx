@@ -1,136 +1,204 @@
+"use client"
+
 import * as React from "react"
-import { GalleryVerticalEnd, Users, BarChart, LineChart, Users2, UserCircle, ShoppingBag, TrendingUp, FileText, LogOut } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
-import axios from 'axios';
-import { API_CONFIG } from '@/config/constants';
 import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { Menu } from "lucide-react"
+  BadgeAlert,
+  BarChartIcon,
+  CameraIcon,
+  ClipboardListIcon,
+  Cookie,
+  DatabaseIcon,
+  FileCodeIcon,
+  FileIcon,
+  FileTextIcon,
+  HelpCircleIcon,
+  LayoutDashboardIcon,
+  ListIcon,
+  ScrollTextIcon,
+  SettingsIcon,
+  UsersIcon,
+} from "lucide-react"
 
-const menuItems = [
-  {
-    title: "Customize Menu",
-    url: "/",
-    icon: GalleryVerticalEnd,
-  },
-  {
-    title: "Servers",
-    url: "/servers",
-    icon: Users,
-  },
-  {
-    title: "Analytics",
-    url: "/analytics",
-    icon: BarChart,
-  },
-  {
-    title: "Sales Analytics",
-    url: "/sales-analytics",
-    icon: TrendingUp,
-  },
-  {
-    title: "Monitoring",
-    url: "/monitoring",
-    icon: LineChart,
-  },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: FileText,
-  },
-  {
-    title: "POS Admins",
-    url: "/pos-admins",
-    icon: Users2,
-  },
-  {
-    title: "Customers",
-    url: "/customers",
-    icon: UserCircle,
-  },
-  {
-    title: "Inventory",
-    url: "/inventory",
-    icon: LineChart,
-  },
-  {
-    title: "Suppliers",
-    url: "/suppliers",
-    icon: ShoppingBag,
-  },
-]
 
-export function AppSidebar({ user, onLogout }) {
-  const location = useLocation()
-  
-  const handleLogout = async () => {
-    try {
-      // Call the logout endpoint using your API
-      await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
-        action: 'user_logout',
-        content: {}
-      });
-    } catch (error) {
-      console.error('Logout API error:', error);
-      // Continue with logout even if API call fails
-    } finally {
-      // Always call onLogout to clear local state
-      onLogout();
+import { NavMain } from "@/components/nav-main"
+import { NavUser } from "@/components/nav-user"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
+
+const data = {
+  user: {
+    name: "Pasara",
+    email: "Built By Pasmen Pasara",
+    avatar: "/src/assets/PasaraLogoV1.jpg",
+  },
+  navMain: [
+    {
+      title: "Dashboard",
+      url: "/",
+      icon: LayoutDashboardIcon,
+    },
+    {
+      title: "Analytics",
+      url: "/analytics",
+      icon: BarChartIcon,
+    },
+    {
+      title: "Sales Analytics",
+      url: "/sales-analytics",
+      icon: BarChartIcon,
+    },
+    {
+      title: "Suppliers",
+      url: "/suppliers",
+      icon: ListIcon,
+    },
+    {
+      title: "Servers",
+      url: "/servers",
+      icon: UsersIcon,
+    },
+    {
+      title: "Monitoring",
+      url: "/monitoring",
+      icon: ListIcon,
+    },
+    {
+      title: "POS Admins",
+      url: "/pos-admins",
+      icon: SettingsIcon,
+    },
+    {
+      title: "Customers",
+      url: "/customers",
+      icon: UsersIcon,
+    },
+    {
+      title: "Inventory",
+      url: "/inventory",
+      icon: DatabaseIcon,
+    },
+    {
+      title: "Alerts",
+      url: "/alerts",
+      icon: BadgeAlert,
+    },
+    {
+      title: "Reports",
+      url: "/reports",
+      icon: ScrollTextIcon,
     }
-  };
-  
+  ],
+  navClouds: [
+    {
+      title: "Capture",
+      icon: CameraIcon,
+      isActive: true,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Proposal",
+      icon: FileTextIcon,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Prompts",
+      icon: FileCodeIcon,
+      url: "#",
+      items: [
+        {
+          title: "Active Proposals",
+          url: "#",
+        },
+        {
+          title: "Archived",
+          url: "#",
+        },
+      ],
+    },
+  ],
+  navSecondary: [
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: SettingsIcon,
+    },
+    {
+      title: "Help",
+      url: "/help",
+      icon: HelpCircleIcon,
+    }
+  ],
+  documents: [
+    {
+      name: "Data Library",
+      url: "#",
+      icon: DatabaseIcon,
+    },
+    {
+      name: "Reports",
+      url: "#",
+      icon: ClipboardListIcon,
+    },
+    {
+      name: "Word Assistant",
+      url: "#",
+      icon: FileIcon,
+    },
+  ],
+}
+
+export function AppSidebar({ ...props }) {
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] p-0">
-        <div className="flex flex-col h-[100dvh]">
-          <div className="border-b p-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <GalleryVerticalEnd className="h-6 w-6" />
-              <span className="font-semibold">Restaurant Admin</span>
-            </div>
-            {user && (
-              <div className="mt-2 text-sm text-muted-foreground">
-                Welcome, {user.first_name || user.username}
-              </div>
-            )}
-          </div>
-          <nav className="flex-1 flex flex-col p-2 overflow-y-auto">
-            {menuItems.map((item) => (
-              <Link 
-                key={item.title} 
-                to={item.url}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent ${
-                  location.pathname === item.url ? 'bg-accent' : ''
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.title}
-              </Link>
-            ))}
-          </nav>
-          {user && (
-            <div className="border-t p-2 shrink-0">
-              <Button 
-                variant="ghost" 
-                onClick={handleLogout}
-                className="w-full justify-start"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+    <Sidebar collapsible="offcanvas" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="data-[slot=sidebar-menu-button]:!p-1.5"
+            >
+              <a href="#">
+                <span className="text-lg border-b border-dashed border-b-rose-200 font-medium font-cinzel bg-gradient-to-r from-rose-500 to-emerald-500 text-transparent bg-clip-text">Calabash Kitchen</span>
+                <Cookie className="h-16 w-16 text-rose-500" size={64} strokeWidth={1.5} />
+
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={data.navMain} />
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={props.user} onLogout={props.onLogout} />
+      </SidebarFooter>
+    </Sidebar>
   )
 }

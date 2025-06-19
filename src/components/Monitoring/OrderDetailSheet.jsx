@@ -77,9 +77,7 @@ export default function OrderDetailSheet({ order, isOpen, onClose, onUpdateStatu
                   {new Date(order.timestamp).toLocaleString()}
                 </p>
               </div>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
+          
             </div>
           </div>
 

@@ -213,7 +213,7 @@ export function SuppliersPage() {
   }, [activeTab]);
 
   return (
-    <div className="container mx-auto py-8 max-w-7xl">
+    <div className="p-4 md:p-6 space-y-4">
       <h1 className="text-3xl font-bold mb-6">Suppliers & Purchases</h1>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -503,7 +503,7 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="sticky top-0 bg-white z-10 pb-4 border-b">
+        <DialogHeader className="sticky top-0 pb-4 border-b">
           <DialogTitle>Add New Purchase</DialogTitle>
           <DialogDescription>
             Enter the purchase details. Fields marked with * are required.

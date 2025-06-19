@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/constants';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +29,18 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { LoadingSpinner, TableLoadingState, CardLoadingState } from "@/components/ui/loading";
+import { ChartAreaInteractive } from "@/components/chart-area-interactive"
+import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 
 export default function AnalyticsPage() {
   const [orders, setOrders] = useState([]);
@@ -42,6 +54,42 @@ export default function AnalyticsPage() {
   const [serverFilter, setServerFilter] = useState('');
   const [adminFilter, setAdminFilter] = useState('');
   const [date, setDate] = useState(null);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [trends, setTrends] = useState({
+    sales: {
+      percentage: 0,
+      isUp: true
+    },
+    orders: {
+      percentage: 0,
+      isUp: true
+    },
+    average: {
+      percentage: 0,
+      isUp: true
+    },
+    momo: {
+      percentage: 0,
+      isUp: true
+    }
+  });
+
+  const tableStyles = `
+  .table-dividers th,
+  .table-dividers td {
+    border-right: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .table-dividers th:last-child,
+  .table-dividers td:last-child {
+    border-right: none;
+
+  }
+`;
 
   const calculateOrderTotal = (containers) => {
     if (!containers || typeof containers !== 'object') {
@@ -110,6 +158,7 @@ export default function AnalyticsPage() {
   }, [timeFilter, paymentFilter, date]);
 
   const fetchAnalyticsData = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: 'get_analytics',
@@ -129,7 +178,7 @@ export default function AnalyticsPage() {
 
       setOrders(filteredOrders);
 
-      // Calculate total sales with filtered orders - with safety checks
+      // Calculate total sales with filtered orders
       const totalSales = filteredOrders.reduce((sum, order) => {
         if (!order?.containers || typeof order.containers !== 'object') return sum;
         try {
@@ -141,6 +190,84 @@ export default function AnalyticsPage() {
         }
       }, 0);
 
+      // Calculate trends
+      const now = new Date();
+      const currentPeriodOrders = filteredOrders.filter(order => {
+        const orderDate = new Date(order.timestamp);
+        if (timeFilter === 'today') {
+          return orderDate.toDateString() === now.toDateString();
+        } else if (timeFilter === 'week') {
+          return (now - orderDate) <= 7 * 24 * 60 * 60 * 1000;
+        } else if (timeFilter === 'month') {
+          return (now - orderDate) <= 30 * 24 * 60 * 60 * 1000;
+        }
+        return true;
+      });
+
+      const previousPeriodOrders = filteredOrders.filter(order => {
+        const orderDate = new Date(order.timestamp);
+        if (timeFilter === 'today') {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          return orderDate.toDateString() === yesterday.toDateString();
+        } else if (timeFilter === 'week') {
+          const twoWeeksAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
+          return orderDate >= twoWeeksAgo && orderDate < new Date(now - 7 * 24 * 60 * 60 * 1000);
+        } else if (timeFilter === 'month') {
+          const twoMonthsAgo = new Date(now - 60 * 24 * 60 * 60 * 1000);
+          return orderDate >= twoMonthsAgo && orderDate < new Date(now - 30 * 24 * 60 * 60 * 1000);
+        }
+        return false;
+      });
+
+      // Calculate previous period totals
+      const previousTotalSales = previousPeriodOrders.reduce((sum, order) => {
+        if (!order?.containers) return sum;
+        return sum + calculateOrderTotal(order.containers);
+      }, 0);
+
+      // Calculate trend percentages
+      const calculateTrendPercentage = (current, previous) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return ((current - previous) / previous * 100);
+      };
+
+      // Current period stats
+      const currentStats = {
+        sales: totalSales,
+        orders: currentPeriodOrders.length,
+        average: totalSales / currentPeriodOrders.length || 0,
+        momo: (currentPeriodOrders.filter(o => o.payment_method === 'momo').length / currentPeriodOrders.length) * 100 || 0
+      };
+
+      // Previous period stats
+      const previousStats = {
+        sales: previousTotalSales,
+        orders: previousPeriodOrders.length,
+        average: previousTotalSales / previousPeriodOrders.length || 0,
+        momo: (previousPeriodOrders.filter(o => o.payment_method === 'momo').length / previousPeriodOrders.length) * 100 || 0
+      };
+
+      // Update trends
+      setTrends({
+        sales: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.sales, previousStats.sales)).toFixed(1),
+          isUp: currentStats.sales >= previousStats.sales
+        },
+        orders: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.orders, previousStats.orders)).toFixed(1),
+          isUp: currentStats.orders >= previousStats.orders
+        },
+        average: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.average, previousStats.average)).toFixed(1),
+          isUp: currentStats.average >= previousStats.average
+        },
+        momo: {
+          percentage: Math.abs(calculateTrendPercentage(currentStats.momo, previousStats.momo)).toFixed(1),
+          isUp: currentStats.momo >= previousStats.momo
+        }
+      });
+
       setStats({
         totalOrders: filteredOrders.length,
         totalSales: Number(totalSales)
@@ -149,6 +276,14 @@ export default function AnalyticsPage() {
       console.error('Error fetching analytics data:', error);
       setStats({ totalOrders: 0, totalSales: 0 });
       setOrders([]); // Ensure orders is at least an empty array
+      setTrends({
+        sales: { percentage: 0, isUp: true },
+        orders: { percentage: 0, isUp: true },
+        average: { percentage: 0, isUp: true },
+        momo: { percentage: 0, isUp: true }
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -164,6 +299,17 @@ export default function AnalyticsPage() {
       return false;
     }
   });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
   // Add safety checks to filtered stats calculation
   const filteredStats = {
@@ -181,10 +327,8 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="w-full p-4 md:p-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Sales Analytics</h1>
-        <div className="flex flex-wrap gap-4">
+    <div className="space-y-6 p-6">
+        <div className="flex gap-4 justify-end items-end">
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -193,6 +337,7 @@ export default function AnalyticsPage() {
                   "justify-start text-left font-normal",
                   !date && "text-muted-foreground"
                 )}
+                disabled={isLoading}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -207,10 +352,30 @@ export default function AnalyticsPage() {
               />
             </PopoverContent>
           </Popover>
-          
-          <Select value={timeFilter} onValueChange={setTimeFilter}>
+          <Select 
+            value={paymentFilter} 
+            onValueChange={setPaymentFilter}
+            disabled={isLoading}
+          >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time range" />
+              <SelectValue placeholder="Payment Method" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payments</SelectItem>
+              <SelectItem value="cash">Cash Only</SelectItem>
+              <SelectItem value="hubtel">Hubtel</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select 
+            value={timeFilter} 
+            onValueChange={(value) => {
+              setTimeFilter(value);
+              setDate(null); // Reset date when time filter changes
+            }}
+            disabled={!!date || isLoading} // Disable time filter when specific date is selected
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time period" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Time</SelectItem>
@@ -219,48 +384,150 @@ export default function AnalyticsPage() {
               <SelectItem value="month">Last 30 Days</SelectItem>
             </SelectContent>
           </Select>
-          
-          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select payment type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Payments</SelectItem>
-              <SelectItem value="cash">Cash</SelectItem>
-              <SelectItem value="hubtel">Hubtel</SelectItem>
-              <SelectItem value="card">Card</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
-      </div>
-
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 mb-6">
-        <Card className="w-full">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <Badge variant="default">GHS {filteredStats.totalSales.toFixed(2)}</Badge>
+        
+      {/* Stats Cards - Now with loading state */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>Total Sales</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? <LoadingSpinner /> : `GHS ${filteredStats.totalSales.toFixed(2)}`}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.sales.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.sales.percentage}%
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">GHS {filteredStats.totalSales.toFixed(2)}</div>
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.sales.isUp ? "Trending up" : "Trending down"} this period
+              {trends.sales.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               {timeFilter === 'all' ? 'All time sales' : 
                timeFilter === 'today' ? 'Today\'s sales' : 
                timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+              {date && ' for ' + format(date, "PPP")}
             </p>
           </CardContent>
         </Card>
-        
-        <Card className="w-full">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge variant="default">{filteredStats.totalOrders}</Badge>
+
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>Total Orders</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? <LoadingSpinner /> : filteredStats.totalOrders}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.orders.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.orders.percentage}%
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">Completed orders</p>
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.orders.isUp ? "Order volume up" : "Order volume down"}
+              {trends.orders.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Compared to previous period
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>Average Order Value</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                `GHS ${(filteredStats.totalSales / filteredStats.totalOrders || 0).toFixed(2)}`
+              )}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.average.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.average.percentage}%
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.average.isUp ? "Higher average spend" : "Lower average spend"}
+              {trends.average.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Average basket size trend
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="@container/card">
+          <CardHeader className="relative">
+            <CardDescription>MoMo Payment Rate</CardDescription>
+            <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                `${((orders.filter(o => o.payment_method === 'momo').length / orders.length) * 100 || 0).toFixed(1)}%`
+              )}
+            </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {trends.momo.isUp ? (
+                  <TrendingUpIcon className="size-3" />
+                ) : (
+                  <TrendingDownIcon className="size-3" />
+                )}
+                {trends.momo.percentage}%
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-col items-start gap-1 text-sm">
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {trends.momo.isUp ? "MoMo adoption rising" : "MoMo usage declining"}
+              {trends.momo.isUp ? (
+                <TrendingUpIcon className="size-4" />
+              ) : (
+                <TrendingDownIcon className="size-4" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Mobile Money vs Cash payments
+            </p>
           </CardContent>
         </Card>
       </div>
+      <ChartAreaInteractive />
 
       <Card className="w-full">
         <CardHeader>
@@ -277,6 +544,7 @@ export default function AnalyticsPage() {
                   value={customerFilter}
                   onChange={(e) => setCustomerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -286,6 +554,7 @@ export default function AnalyticsPage() {
                   value={serverFilter}
                   onChange={(e) => setServerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -295,15 +564,17 @@ export default function AnalyticsPage() {
                   value={adminFilter}
                   onChange={(e) => setAdminFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
             </div>
 
             {/* Table */}
-            <div className="relative overflow-x-auto rounded-md border">
-              <Table>
+            <div className="relative overflow-x-auto rounded-md border ">
+              <style>{tableStyles}</style>
+              <Table className="table-dividers">
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/50">
                     <TableHead>Order ID</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Amount</TableHead>
@@ -314,21 +585,114 @@ export default function AnalyticsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrders.map(order => (
-                    <TableRow key={order.uuid}>
-                      <TableCell className="font-medium">{order.uuid}</TableCell>
-                      <TableCell>{order.customer__name || 'Guest'}</TableCell>
-                      <TableCell>
-                        GHS {(order?.containers ? calculateOrderTotal(order.containers) : 0).toFixed(2)}
-                      </TableCell>
-                      <TableCell>{order.payment_method}</TableCell>
-                      <TableCell>{order.server?.username || 'Unassigned'}</TableCell>
-                      <TableCell>{order.admin?.username || 'N/A'}</TableCell>
-                      <TableCell>{new Date(order.timestamp).toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
+                  {isLoading ? (
+                    <TableLoadingState colSpan={7} message="Loading orders data..." />
+                  ) : currentOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="h-24 text-center">
+                        No orders found
+                      </td>
+                    </tr>
+                  ) : (
+                    currentOrders.map(order => (
+                      <TableRow key={order.uuid}>
+                        <TableCell className="font-medium">{order.uuid}</TableCell>
+                        <TableCell className="capitalize">{order.customer__name || 'Guest'}</TableCell>
+                        <TableCell>
+                          GHS {(order?.containers ? calculateOrderTotal(order.containers) : 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="capitalize">{order.payment_method}</TableCell>
+                        <TableCell className="capitalize">{order.server?.username || 'Unassigned'}</TableCell>
+                        <TableCell className="capitalize">{order.admin?.username || 'N/A'}</TableCell>
+                        <TableCell>{new Date(order.timestamp).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
+              
+              {/* Pagination - Only show when not loading */}
+              {!isLoading && filteredOrders.length > 0 && (
+                <div className="mt-4 flex items-center justify-between p-2">
+
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        />
+                      </PaginationItem>
+
+                      {/* First Page */}
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => handlePageChange(1)}
+                          isActive={currentPage === 1}
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+
+                      {/* Ellipsis and pages before current */}
+                      {currentPage > 3 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Pages around current page */}
+                      {Array.from({ length: totalPages }).map((_, i) => {
+                        const pageNumber = i + 1;
+                        if (
+                          pageNumber !== 1 &&
+                          pageNumber !== totalPages &&
+                          pageNumber >= currentPage - 1 &&
+                          pageNumber <= currentPage + 1
+                        ) {
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationLink
+                                onClick={() => handlePageChange(pageNumber)}
+                                isActive={currentPage === pageNumber}
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      {/* Ellipsis and pages after current */}
+                      {currentPage < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+
+                      {/* Last Page */}
+                      {totalPages > 1 && (
+                        <PaginationItem>
+                          <PaginationLink
+                            onClick={() => handlePageChange(totalPages)}
+                            isActive={currentPage === totalPages}
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

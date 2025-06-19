@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/constants';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,9 +19,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderDetailSheet from './OrderDetailSheet';
-import CanceledOrdersView from './CanceledOrdersView';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { LoadingSpinner, TableLoadingState, CardLoadingState } from "@/components/ui/loading";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const ORDER_TYPE_CHOICES = {
   delivery: 'Delivery',
@@ -29,8 +45,19 @@ const ORDER_TYPE_CHOICES = {
   on_site: 'On Site'
 };
 
+const tableStyles = `
+  .table-dividers th,
+  .table-dividers td {
+    border-right: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .table-dividers th:last-child,
+  .table-dividers td:last-child {
+    border-right: none;
+  }
+`;
+
 export default function MonitoringDashboard() {
-  const [activeTab, setActiveTab] = useState('active');
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -44,6 +71,11 @@ export default function MonitoringDashboard() {
   const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -52,6 +84,7 @@ export default function MonitoringDashboard() {
   }, [timeFilter]); // Re-fetch when filter changes
 
   const fetchDashboardData = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         'action': 'get_dashboard_data',
@@ -64,6 +97,8 @@ export default function MonitoringDashboard() {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -82,6 +117,17 @@ export default function MonitoringDashboard() {
     completedOrders: filteredOrders.filter(order => order.status === 'completed').length
   };
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   // Helper to log activity
   const logActivity = async (description) => {
     try {
@@ -95,8 +141,8 @@ export default function MonitoringDashboard() {
   };
 
   const updateOrderStatus = async (orderUuid, newStatus) => {
+    setIsUpdating(true);
     try {
-      console.log('Updating order status:', { orderUuid, newStatus });
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: 'update_order_status',
         content: {
@@ -105,16 +151,13 @@ export default function MonitoringDashboard() {
         }
       });
 
-      console.log('API Response:', response.data);
-
       if (response.data.status === 'success') {
         // Update the order in the local state
-        setOrders(prevOrders => prevOrders.map(order => 
-          order.uuid === orderUuid 
+        setOrders(orders.map(order =>
+          order.uuid === orderUuid
             ? { ...order, status: newStatus }
             : order
         ));
-        fetchDashboardData(); // Refresh the data
         setIsModalOpen(false);
 
         // Find the order and get its name
@@ -135,11 +178,11 @@ export default function MonitoringDashboard() {
 
         // Log the activity
         logActivity(description);
-      } else {
-        console.error('Failed to update status:', response.data);
       }
     } catch (error) {
       console.error('Error updating order status:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -155,7 +198,7 @@ export default function MonitoringDashboard() {
         }
 
         const { items = [], repeatCount = 1 } = container;
-        
+
         const containerTotal = items.reduce((total, item) => {
           if (!item || !item.is_available) {
             return total;
@@ -192,7 +235,7 @@ export default function MonitoringDashboard() {
           }
           return total;
         }, 0);
-        
+
         return Number(grandTotal) + (Number(containerTotal) * (Number(repeatCount) || 1));
       }, 0);
     } catch (error) {
@@ -202,11 +245,21 @@ export default function MonitoringDashboard() {
   };
 
   return (
-    <div className="w-full p-4 md:p-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Order Monitoring</h1>
-        <div className="flex gap-4">
-          <Select value={timeFilter} onValueChange={setTimeFilter}>
+    <div className="px-6 space-y-6">
+      <style>{tableStyles}</style>
+      <div className="flex justify-between items-center">
+        <CardHeader className="mt-0 top-0 space-y-0">
+          <CardTitle className="text-xl font-semibold font-sans">Orders Dashboard</CardTitle>
+          <CardDescription>Manage your restaurant orders.</CardDescription>
+        </CardHeader>        
+        <div className="flex items-center gap-2">
+          {isLoading && (
+            <div className="flex items-center">
+              <LoadingSpinner size="sm" className="mr-2" />
+              <span className="text-sm text-muted-foreground">Refreshing...</span>
+            </div>
+          )}
+          <Select value={timeFilter} onValueChange={setTimeFilter} disabled={isLoading}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select time range" />
             </SelectTrigger>
@@ -220,47 +273,72 @@ export default function MonitoringDashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="active">Active Orders</TabsTrigger>
-          <TabsTrigger value="canceled">Canceled Orders</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="active">
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mb-6">
-        <Card className="w-full">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Badge variant="default">{filteredStats.totalOrders}</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">All orders</p>
-          </CardContent>
-        </Card>
-        <Card className="w-full">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unprocessed Orders</CardTitle>
-            <Badge variant="warning" className="ml-2">{filteredStats.pendingOrders}</Badge>
+            <Badge variant="warning" className="ml-2">
+              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.pendingOrders}
+            </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredStats.pendingOrders}</div>
-            <p className="text-xs text-muted-foreground">Awaiting processing</p>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{filteredStats.pendingOrders}</div>
+                <p className="text-xs text-muted-foreground">Awaiting processing</p>
+              </>
+            )}
           </CardContent>
         </Card>
-        <Card className="w-full">
+
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed Orders</CardTitle>
-            <Badge variant="success" className="ml-2">{filteredStats.completedOrders}</Badge>
+            <Badge variant="success" className="ml-2">
+              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.completedOrders}
+            </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredStats.completedOrders}</div>
-            <p className="text-xs text-muted-foreground">Successfully completed</p>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{filteredStats.completedOrders}</div>
+                <p className="text-xs text-muted-foreground">Successfully completed</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <Badge className="ml-2" variant="outline">
+              {isLoading ? <LoadingSpinner size="sm" /> : filteredStats.totalOrders}
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <CardLoadingState />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{filteredStats.totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  {timeFilter === 'all' ? 'All time total' :
+                    timeFilter === 'today' ? 'Today\'s total' :
+                      timeFilter === 'week' ? 'Last 7 days' : 'Last 30 days'}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      <Card className="w-full">
+      {/* Orders Table */}
+      <Card>
         <CardHeader>
           <CardTitle>Orders</CardTitle>
         </CardHeader>
@@ -275,6 +353,7 @@ export default function MonitoringDashboard() {
                   value={customerFilter}
                   onChange={(e) => setCustomerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -284,6 +363,7 @@ export default function MonitoringDashboard() {
                   value={serverFilter}
                   onChange={(e) => setServerFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -293,11 +373,12 @@ export default function MonitoringDashboard() {
                   value={adminFilter}
                   onChange={(e) => setAdminFilter(e.target.value)}
                   className="mt-1"
+                  disabled={isLoading}
                 />
               </div>
               <div>
                 <label className="text-sm font-medium">Order Type</label>
-                <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
+                <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter} disabled={isLoading}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select order type" />
                   </SelectTrigger>
@@ -312,83 +393,176 @@ export default function MonitoringDashboard() {
             </div>
 
             {/* Table */}
-            <div className="relative overflow-x-auto rounded-md border">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase bg-muted">
-                  <tr>
-                    <th className="px-6 py-3">Order ID</th>
-                    <th className="px-6 py-3">Customer</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Order Type</th>
-                    <th className="px-6 py-3">Date & Time</th>
-                    <th className="px-6 py-3">Server</th>
-                    <th className="px-6 py-3">Admin</th>
-                    <th className="px-6 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.map(order => (
-                    <tr key={order.uuid} className="border-b bg-card hover:bg-muted/50">
-                      <td className="px-6 py-4 font-medium">
-                        {order.uuid.slice(0, 6)}
-                      </td>
-                      <td className="px-6 py-4">{order.customer?.name || 'Guest'}</td>
-                      <td className="px-6 py-4">
-                        <Badge variant={
-                          order.status === 'completed' ? 'success' :
-                          order.status === 'unprocessed' ? 'warning' :
-                          'default'
-                        }>
-                          {order.status}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant="outline">
+            <div className="rounded-md border">
+              <Table className="table-dividers">
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="text-center">Order ID</TableHead>
+                    <TableHead className="text-center">Customer</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Order Type</TableHead>
+                    <TableHead className="text-center">Date & Time</TableHead>
+                    <TableHead className="text-center">Server</TableHead>
+                    <TableHead className="text-center">Admin</TableHead>
+                    <TableHead className="text-center w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center">
+                        <div className="flex justify-center items-center h-24">
+                          <LoadingSpinner size="lg" className="mr-2" />
+                          <p className="text-muted-foreground">Loading orders...</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : currentOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center h-24">
+                        No orders found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    currentOrders.map(order => (
+                      <TableRow key={order.uuid}>
+                        <TableCell className="font-medium">{order.uuid}</TableCell>
+                        <TableCell className="capitalize">{order.customer?.name || 'Guest'}</TableCell>
+                        <TableCell className="text-center capitalize text-emerald-500">
+                          <Badge className={order.status === 'completed' ? 'bg-emerald-500 text-emerald-50' :
+                            order.status === 'unprocessed' ? 'bg-yellow-500 text-yellow-50' :
+                              'bg-muted text-muted-foreground'}>
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center capitalize">
                           {ORDER_TYPE_CHOICES[order.order_type] || order.order_type}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        {new Date(order.timestamp).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4">{order.server?.username || 'Unassigned'}</td>
-                      <td className="px-6 py-4">{order.admin?.username || 'N/A'}</td>
-                      <td className="px-6 py-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedOrder(order);
-                              setIsModalOpen(true);
-                            }}>
-                              View Details
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {new Date(order.timestamp).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-center capitalize">
+                          {order.server?.username || 'Unassigned'}
+                        </TableCell>
+                        <TableCell className="text-center capitalize">
+                          {order.admin?.username || 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" disabled={isUpdating}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setIsModalOpen(true);
+                              }}>
+                                View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
+
+            {/* Pagination */}
+            {!isLoading && filteredOrders.length > 0 && (
+              <div className="mt-4 flex items-center justify-between p-2">
+
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      />
+                    </PaginationItem>
+
+                    {/* First Page */}
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => handlePageChange(1)}
+                        isActive={currentPage === 1}
+                      >
+                        1
+                      </PaginationLink>
+                    </PaginationItem>
+
+                    {/* Ellipsis and pages before current */}
+                    {currentPage > 3 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    {/* Pages around current page */}
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const pageNumber = i + 1;
+                      if (
+                        pageNumber !== 1 &&
+                        pageNumber !== totalPages &&
+                        pageNumber >= currentPage - 1 &&
+                        pageNumber <= currentPage + 1
+                      ) {
+                        return (
+                          <PaginationItem key={pageNumber}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(pageNumber)}
+                              isActive={currentPage === pageNumber}
+                            >
+                              {pageNumber}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+
+                    {/* Ellipsis and pages after current */}
+                    {currentPage < totalPages - 2 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    {/* Last Page */}
+                    {totalPages > 1 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => handlePageChange(totalPages)}
+                          isActive={currentPage === totalPages}
+                        >
+                          {totalPages}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
-        </TabsContent>
-
-        <TabsContent value="canceled">
-          <CanceledOrdersView timeFilter={timeFilter} />
-        </TabsContent>
-      </Tabs>
 
       <OrderDetailSheet
         order={selectedOrder}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onUpdateStatus={updateOrderStatus}
+        isUpdating={isUpdating}
       />
     </div>
   );
