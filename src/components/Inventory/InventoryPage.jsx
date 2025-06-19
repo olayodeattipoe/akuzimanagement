@@ -855,8 +855,27 @@ function AddRelationshipModal({ open, onOpenChange, availableItems, mode, onAddR
   const [selectedTab, setSelectedTab] = useState('product');
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemAutoDeduct, setSelectedItemAutoDeduct] = useState(false);
+  const [transformables, setTransformables] = useState([]);
 
-  const filteredItems = availableItems.filter(item => item.type === selectedTab);
+  useEffect(() => {
+    if (open) {
+      // Fetch transformables when modal opens
+      axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+        action: 'return_inventory_products',
+        content: { mode: 'transformables' }
+      }).then(response => {
+        if (Array.isArray(response.data)) {
+          setTransformables(response.data.map(item => ({ ...item, type: 'transformable' })));
+        } else {
+          setTransformables([]);
+        }
+      }).catch(() => setTransformables([]));
+    }
+  }, [open]);
+
+  const filteredItems = selectedTab === 'transformable'
+    ? transformables
+    : availableItems.filter(item => item.type === selectedTab);
 
   const handleAdd = async () => {
     if (selectedItem) {
@@ -866,17 +885,14 @@ function AddRelationshipModal({ open, onOpenChange, availableItems, mode, onAddR
           content: {
             source_type: mode === 'custom_options' ? 'custom_option' : 'product',
             source_id: currentItemId,
-            target_type: selectedItem.type === 'custom_option' ? 'custom_option' : 'product',
+            target_type: selectedTab === 'custom_option' ? 'custom_option' : 'product',
             target_id: selectedItem.id,
             auto_deduct: selectedItemAutoDeduct
           }
         };
-
         console.log('Creating relationship:', payload);
-
         const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, payload);
         console.log('Add relationship response:', response.data);
-
         if (response.data?.status === 'success') {
           onAddRelationship(response.data.relationship);
           onOpenChange(false);
@@ -908,13 +924,12 @@ function AddRelationshipModal({ open, onOpenChange, availableItems, mode, onAddR
         <DialogHeader>
           <DialogTitle>Add Indirect Product Relationship</DialogTitle>
         </DialogHeader>
-        
         <Tabs defaultValue="product" onValueChange={setSelectedTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="product">Add Indirect Product</TabsTrigger>
             <TabsTrigger value="custom_option">Add Custom Option Choice</TabsTrigger>
+            <TabsTrigger value="transformable">Add Transformable</TabsTrigger>
           </TabsList>
-          
           <TabsContent value="product" className="space-y-4">
             <div className="grid gap-4 max-h-[400px] overflow-y-auto">
               {filteredItems.map((item) => (
@@ -939,7 +954,6 @@ function AddRelationshipModal({ open, onOpenChange, availableItems, mode, onAddR
                           checked={selectedItemAutoDeduct}
                           onCheckedChange={(checked) => {
                             setSelectedItemAutoDeduct(checked);
-                            // Prevent the item selection click from triggering
                             event.stopPropagation();
                           }}
                         />
@@ -955,7 +969,6 @@ function AddRelationshipModal({ open, onOpenChange, availableItems, mode, onAddR
               )}
             </div>
           </TabsContent>
-          
           <TabsContent value="custom_option" className="space-y-4">
             <div className="grid gap-4 max-h-[400px] overflow-y-auto">
               {filteredItems.map((item) => (
@@ -983,7 +996,6 @@ function AddRelationshipModal({ open, onOpenChange, availableItems, mode, onAddR
                           checked={selectedItemAutoDeduct}
                           onCheckedChange={(checked) => {
                             setSelectedItemAutoDeduct(checked);
-                            // Prevent the item selection click from triggering
                             event.stopPropagation();
                           }}
                         />
@@ -999,8 +1011,46 @@ function AddRelationshipModal({ open, onOpenChange, availableItems, mode, onAddR
               )}
             </div>
           </TabsContent>
+          <TabsContent value="transformable" className="space-y-4">
+            <div className="grid gap-4 max-h-[400px] overflow-y-auto">
+              {filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "p-4 border rounded-lg cursor-pointer transition-all",
+                    selectedItem?.id === item.id ? "border-primary bg-primary/5" : "hover:border-primary/50"
+                  )}
+                  onClick={() => handleItemClick(item)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{item.name}</div>
+                      <div className="text-sm text-gray-500">ID: {item.id}</div>
+                    </div>
+                    {selectedItem?.id === item.id && (
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor={`auto-deduct-${item.id}`} className="text-sm">Auto-deduct</Label>
+                        <Switch
+                          id={`auto-deduct-${item.id}`}
+                          checked={selectedItemAutoDeduct}
+                          onCheckedChange={(checked) => {
+                            setSelectedItemAutoDeduct(checked);
+                            event.stopPropagation();
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {filteredItems.length === 0 && (
+                <div className="text-center py-4 text-gray-500">
+                  No available transformables to add
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
-
         <div className="flex justify-end gap-3 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
