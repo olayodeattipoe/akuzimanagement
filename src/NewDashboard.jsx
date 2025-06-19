@@ -6,6 +6,7 @@ import ServersPage from './components/Servers/ServersPage'
 import AnalyticsPage from './components/Analytics/AnalyticsPage'
 import SalesAnalytics from './components/Analytics/SalesAnalytics'
 import MonitoringDashboard from './components/Monitoring/MonitoringDashboard'
+import Reports from './pages/Reports'
 import POSAdminPage from './components/Admin/POSAdminPage'
 import CustomersPage from './components/Customers/CustomersPage'
 import InventoryPage from "./components/Inventory/InventoryPage"
@@ -14,7 +15,7 @@ import { SuppliersPage } from "./components/Suppliers/SuppliersPage"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
 
-export function NewDashboard() {
+export function NewDashboard({ user, onLogout }) {
   const location = useLocation()
   const [control_array, setControl_array] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -29,6 +30,8 @@ export function NewDashboard() {
         return <SalesAnalytics />
       case '/monitoring':
         return <MonitoringDashboard />
+      case '/reports':
+        return <Reports />
       case '/pos-admins':
         return <POSAdminPage />
       case '/customers':
@@ -55,7 +58,7 @@ export function NewDashboard() {
 
   return (
     <SidebarProvider>
-      <AppSidebar variant="inset" />
+      <AppSidebar user={user} onLogout={onLogout} variant="inset" />
       <SidebarInset>
         <SiteHeader />
         <div className="flex-1 flex flex-col">

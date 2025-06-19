@@ -128,6 +128,18 @@ export default function MonitoringDashboard() {
     setCurrentPage(page);
   };
 
+  // Helper to log activity
+  const logActivity = async (description) => {
+    try {
+      await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+        action: 'log_activity',
+        content: { description }
+      });
+    } catch (error) {
+      console.error('Failed to log activity:', error);
+    }
+  };
+
   const updateOrderStatus = async (orderUuid, newStatus) => {
     setIsUpdating(true);
     try {
@@ -147,6 +159,25 @@ export default function MonitoringDashboard() {
             : order
         ));
         setIsModalOpen(false);
+
+        // Find the order and get its name
+        const order = orders.find(o => o.uuid === orderUuid);
+        const orderName = order?.customer?.name || 'Unknown Customer';
+        // Get the current user from localStorage
+        const user = JSON.parse(localStorage.getItem('user'));
+        const userName = user?.first_name || user?.username || 'Unknown User';
+
+        // Compose the activity description
+        let actionText = '';
+        if (newStatus === 'completed') actionText = 'marked as completed';
+        else if (newStatus === 'canceled') actionText = 'canceled';
+        else if (newStatus === 'unprocessed') actionText = 'marked as unprocessed';
+        else actionText = `changed status to ${newStatus}`;
+
+        const description = `${userName} ${actionText} order "${orderName}" (${orderUuid})`;
+
+        // Log the activity
+        logActivity(description);
       }
     } catch (error) {
       console.error('Error updating order status:', error);
