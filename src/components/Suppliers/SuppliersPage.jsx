@@ -362,6 +362,7 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [optionChoices, setOptionChoices] = useState([]);
+  const [transformables, setTransformables] = useState([]);
   const [purchaseData, setPurchaseData] = useState({
     supplier_id: "",
     item_type: "product",
@@ -389,7 +390,7 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
     }
   }, [open]);
   
-  // Fetch products for dropdown
+  // Fetch products, option choices, and transformables for dropdown
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -397,71 +398,85 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
           action: "return_inventory_products",
           content: { mode: "products" }
         });
-        
         if (Array.isArray(response.data)) {
           setProducts(response.data.map(product => ({
             ...product,
-            id: product.id.toString() // Ensure ID is string for consistent comparison
+            id: product.id.toString()
           })));
         }
       } catch (error) {
         console.error("Error fetching products:", error);
       }
     };
-    
     const fetchOptionChoices = async () => {
       try {
         const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
           action: "return_inventory_products",
           content: { mode: "custom_options" }
         });
-        
         if (Array.isArray(response.data)) {
           setOptionChoices(response.data.map(option => ({
             ...option,
-            id: option.id.toString() // Ensure ID is string for consistent comparison
+            id: option.id.toString()
           })));
         }
       } catch (error) {
         console.error("Error fetching option choices:", error);
       }
     };
-    
+    const fetchTransformables = async () => {
+      try {
+        const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
+          action: "return_inventory_products",
+          content: { mode: "transformables" }
+        });
+        if (Array.isArray(response.data)) {
+          setTransformables(response.data.map(option => ({
+            ...option,
+            id: option.id.toString()
+          })));
+        }
+      } catch (error) {
+        console.error("Error fetching transformables:", error);
+      }
+    };
     if (open) {
       fetchProducts();
       fetchOptionChoices();
+      fetchTransformables();
     }
   }, [open]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
     try {
       // Get the selected item details
-      const selectedItem = purchaseData.item_type === "product" 
-        ? products.find(p => p.id === purchaseData.item_id)
-        : optionChoices.find(o => o.id === purchaseData.item_id);
-
+      let selectedItem;
+      if (purchaseData.item_type === "product") {
+        selectedItem = products.find(p => p.id === purchaseData.item_id);
+      } else if (purchaseData.item_type === "option_choice") {
+        selectedItem = optionChoices.find(o => o.id === purchaseData.item_id);
+      } else if (purchaseData.item_type === "transformable") {
+        selectedItem = transformables.find(t => t.id === purchaseData.item_id);
+      }
       if (!selectedItem) {
         alert("Please select a valid item");
         setIsLoading(false);
         return;
       }
-
       // Log the data being sent for debugging
       console.log("Sending purchase data:", {
         supplier_id: parseInt(purchaseData.supplier_id),
-        item_type: purchaseData.item_type,
+        item_type: purchaseData.item_type === 'transformable' ? 'products' : purchaseData.item_type,
         item_id: parseInt(purchaseData.item_id),
         selectedItem
       });
-
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: "add_purchase",
         content: {
           supplier_id: parseInt(purchaseData.supplier_id),
-          item_type: purchaseData.item_type,
+          item_type: purchaseData.item_type === 'transformable' ? 'product' : purchaseData.item_type,
           item_id: parseInt(purchaseData.item_id),
           unit_price: parseFloat(purchaseData.unit_price),
           purchase_quantity: parseFloat(purchaseData.purchase_quantity),
@@ -471,7 +486,6 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
           item_name: selectedItem.name
         }
       });
-      
       if (response.data.status === "success") {
         onOpenChange(false);
         onAddPurchase();
@@ -535,6 +549,7 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                 <SelectContent>
                   <SelectItem value="product">Product</SelectItem>
                   <SelectItem value="option_choice">Option Choice</SelectItem>
+                  <SelectItem value="transformable">Transformable</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -547,10 +562,14 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
               <Select 
                 value={purchaseData.item_id} 
                 onValueChange={(value) => {
-                  const selectedItem = purchaseData.item_type === "product" 
-                    ? products.find(p => p.id === value)
-                    : optionChoices.find(o => o.id === value);
-                  
+                  let selectedItem;
+                  if (purchaseData.item_type === "product") {
+                    selectedItem = products.find(p => p.id === value);
+                  } else if (purchaseData.item_type === "option_choice") {
+                    selectedItem = optionChoices.find(o => o.id === value);
+                  } else if (purchaseData.item_type === "transformable") {
+                    selectedItem = transformables.find(t => t.id === value);
+                  }
                   setPurchaseData({
                     ...purchaseData, 
                     item_id: value,
@@ -571,7 +590,6 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                         const searchBox = e.target;
                         const items = document.querySelectorAll('[data-item-name]');
                         const searchTerm = searchBox.value.toLowerCase();
-                        
                         items.forEach(item => {
                           const itemName = item.getAttribute('data-item-name').toLowerCase();
                           if (itemName.includes(searchTerm)) {
@@ -583,7 +601,7 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                       }}
                     />
                   </div>
-                  {purchaseData.item_type === "product" ? 
+                  {purchaseData.item_type === "product" &&
                     products.map(product => (
                       <SelectItem 
                         key={product.id} 
@@ -597,7 +615,8 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                           </span>
                         </div>
                       </SelectItem>
-                    )) :
+                    ))}
+                  {purchaseData.item_type === "option_choice" &&
                     optionChoices.map(option => (
                       <SelectItem 
                         key={option.id} 
@@ -611,8 +630,22 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                           </span>
                         </div>
                       </SelectItem>
-                    ))
-                  }
+                    ))}
+                  {purchaseData.item_type === "transformable" &&
+                    transformables.map(option => (
+                      <SelectItem 
+                        key={option.id} 
+                        value={option.id}
+                        data-item-name={option.name}
+                      >
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">{option.name}</span>
+                          <span className="text-xs text-gray-500">
+                            Current Stock: {option.total_quantity || 0} | Base Price: GH₵{option.base_price || 'N/A'}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
