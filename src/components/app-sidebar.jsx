@@ -14,9 +14,11 @@ import {
   HelpCircleIcon,
   LayoutDashboardIcon,
   ListIcon,
+  ScrollTextIcon,
   SettingsIcon,
   UsersIcon,
 } from "lucide-react"
+
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -86,6 +88,11 @@ const data = {
       title: "Alerts",
       url: "/alerts",
       icon: BadgeAlert,
+    },
+    {
+      title: "Reports",
+      url: "/reports",
+      icon: ScrollTextIcon,
     }
   ],
   navClouds: [
@@ -190,7 +197,7 @@ export function AppSidebar({ ...props }) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={props.user} onLogout={props.onLogout} />
       </SidebarFooter>
     </Sidebar>
   )
