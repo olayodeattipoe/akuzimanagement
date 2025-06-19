@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  BadgeAlert,
   BarChartIcon,
   CameraIcon,
   ClipboardListIcon,
@@ -31,9 +32,9 @@ import {
 
 const data = {
   user: {
-    name: "calabash",
-    email: "admin@calabash.com",
-    avatar: "/avatars/admin.jpg",
+    name: "Pasara",
+    email: "Built By Pasmen Pasara",
+    avatar: "/src/assets/PasaraLogoV1.jpg",
   },
   navMain: [
     {
@@ -80,6 +81,11 @@ const data = {
       title: "Inventory",
       url: "/inventory",
       icon: DatabaseIcon,
+    },
+    {
+      title: "Alerts",
+      url: "/alerts",
+      icon: BadgeAlert,
     }
   ],
   navClouds: [

@@ -363,7 +363,7 @@ export default function AnalyticsPage() {
             <SelectContent>
               <SelectItem value="all">All Payments</SelectItem>
               <SelectItem value="cash">Cash Only</SelectItem>
-              <SelectItem value="momo">Mobile Money Only</SelectItem>
+              <SelectItem value="hubtel">Hubtel</SelectItem>
             </SelectContent>
           </Select>
           <Select 

@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import AddTransformableDialog from "./AddTransformableDialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 function CapacityIndicator({ percentage }) {
   const getColor = (index) => {
@@ -302,10 +303,10 @@ function AddTransformablesDialog({ open, onOpenChange, onSuccess }) {
               />
             </div>
 
-            {/* Total Quantity */}
+            {/* Initial Quantity */}
             <div className="space-y-2">
               <Label htmlFor="totalQuantity" className="text-sm font-medium">
-                Total Quantity
+                Initial Quantity
               </Label>
               <Input
                 id="totalQuantity"
@@ -478,21 +479,9 @@ function EditQuantitiesModal({ open, onOpenChange, item, isBatchMode, onUpdate }
             <div className="text-xs text-blue-600 mt-1">Mode: {isBatchMode ? 'Batch' : 'Individual'}</div>
           </div>
           
+
           <div className="space-y-2">
-            <Label htmlFor="last_received_quantity" className="text-sm font-medium">Last Received Quantity</Label>
-            <Input
-              id="last_received_quantity"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.last_received_quantity}
-              onChange={(e) => setFormData(prev => ({ ...prev, last_received_quantity: e.target.value }))}
-              placeholder="Enter last received quantity"
-              className="border-gray-300 focus:border-primary"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="total_quantity" className="text-sm font-medium">Total Quantity</Label>
+            <Label htmlFor="total_quantity" className="text-sm font-medium">Current Stock</Label>
             <Input
               id="total_quantity"
               type="number"
@@ -500,7 +489,7 @@ function EditQuantitiesModal({ open, onOpenChange, item, isBatchMode, onUpdate }
               step="0.01"
               value={formData.total_quantity}
               onChange={(e) => setFormData(prev => ({ ...prev, total_quantity: e.target.value }))}
-              placeholder="Enter total quantity"
+              placeholder="Enter Current Stock"
               className="border-gray-300 focus:border-primary"
             />
           </div>
@@ -581,8 +570,8 @@ function ItemDetailsTable({ item, isBatchMode, onItemUpdate }) {
                   <>
                     <TableHead className="font-semibold">Name</TableHead>
                     <TableHead className="font-semibold">Description</TableHead>
-                    <TableHead className="font-semibold">Total Quantity</TableHead>
-                    <TableHead className="font-semibold">Remaining</TableHead>
+                    <TableHead className="font-semibold">Initial Quantity</TableHead>
+                    <TableHead className="font-semibold">Current Stock</TableHead>
                     <TableHead className="font-semibold">Unit Per Quantity</TableHead>
                     <TableHead className="font-semibold">Total Number</TableHead>
                     <TableHead className="font-semibold">Unit Price</TableHead>
@@ -593,8 +582,8 @@ function ItemDetailsTable({ item, isBatchMode, onItemUpdate }) {
                   <>
                     <TableHead className="font-semibold">Name</TableHead>
                     <TableHead className="font-semibold">Description</TableHead>
-                    <TableHead className="font-semibold">Total Quantity</TableHead>
-                    <TableHead className="font-semibold">Remaining</TableHead>
+                    <TableHead className="font-semibold">Initial Quantity</TableHead>
+                    <TableHead className="font-semibold">Current Stock</TableHead>
                     <TableHead className="text-right font-semibold">Actions</TableHead>
                   </>
                 )}
@@ -1298,6 +1287,8 @@ export default function InventoryPage() {
     },
   ]);
   const [addTransformableDialogOpen, setAddTransformableDialogOpen] = useState(false);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const calculatePercentage = (item) => {
     if (!item.total_quantity || item.total_quantity <= 0) return 0;
@@ -1426,7 +1417,27 @@ export default function InventoryPage() {
 
   // Fetch initial tab data when component mounts
   useEffect(() => {
-    fetchTabData(activeTab);
+    // On mount, check for tab and id in query params
+    const tabParam = searchParams.get('tab');
+    const idParam = searchParams.get('id');
+    if (tabParam && tabData[tabParam]) {
+      setActiveTab(tabParam);
+      fetchTabData(tabParam).then(() => {
+        if (idParam) {
+          // Wait for fetch, then select item
+          setTimeout(() => {
+            const found = tabData[tabParam].items.find((item) => String(item.id) === String(idParam));
+            if (found) {
+              setSelectedItem(found);
+              setIsBatchMode(found.mode === 'batch' || found.inventoryMode === 'batch');
+            }
+          }, 500); // Wait for data to be set
+        }
+      });
+    } else {
+      fetchTabData(activeTab);
+    }
+    // eslint-disable-next-line
   }, []);
 
   // Filter items based on search query, with null checks
@@ -1527,7 +1538,6 @@ export default function InventoryPage() {
   };
 
   return (
-    <main className="absolute inset-0 left-[240px] right-0 overflow-auto bg-gray-50">
       <div className="min-h-full w-full">
         {/* Header */}
         <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
@@ -1582,9 +1592,9 @@ export default function InventoryPage() {
         </header>
 
         {/* Main Content */}
-        <div className="px-8 py-6">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <div className="sticky top-[88px] z-40 bg-white rounded-lg shadow-sm mb-6">
+        <div className="py-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="">
+            <div className="sticky top-[88px] z-40 bg-white py-4 mb-6 rounded-lg">
               <div className="flex items-center justify-between px-4 py-2">
                 <TabsList className="w-full flex bg-transparent p-0 justify-start">
                   {categories.map((category) => (
@@ -1592,8 +1602,8 @@ export default function InventoryPage() {
                       key={category.id}
                       value={category.id}
                       className={cn(
-                        "data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none px-6 py-3",
-                        "data-[state=active]:bg-transparent hover:bg-gray-50 text-base transition-all",
+                        "data-[state=active]:text-rose-500 border border-gray-200  rounded-md data-[state=active]:border-rose-500 data-[state=active]:shadow-none mx-2 px-6 py-3",
+                        "data-[state=active]:bg-transparent text-base transition-all",
                       )}
                     >
                       <div className="flex flex-col items-start">
@@ -1623,7 +1633,7 @@ export default function InventoryPage() {
               <TabsContent
                 key={category.id}
                 value={category.id}
-                className="animate-in fade-in-50 data-[state=active]:animate-in"
+                className="px-8 animate-in fade-in-50 data-[state=active]:animate-in"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center h-64">
@@ -1720,6 +1730,5 @@ export default function InventoryPage() {
           )}
         </div>
       </div>
-    </main>
   );
 }

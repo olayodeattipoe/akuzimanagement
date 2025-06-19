@@ -9,7 +9,8 @@ import MonitoringDashboard from './components/Monitoring/MonitoringDashboard'
 import POSAdminPage from './components/Admin/POSAdminPage'
 import CustomersPage from './components/Customers/CustomersPage'
 import InventoryPage from "./components/Inventory/InventoryPage"
-import {SuppliersPage}  from "./components/Suppliers/SuppliersPage"
+import AlertsPage from "./components/Alerts/AlertsPage"
+import { SuppliersPage } from "./components/Suppliers/SuppliersPage"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
 
@@ -33,9 +34,11 @@ export function NewDashboard() {
       case '/customers':
         return <CustomersPage />
       case '/inventory':
-          return <InventoryPage/>
+        return <InventoryPage />
+      case '/alerts':
+        return <AlertsPage />
       case '/suppliers':
-          return <SuppliersPage/>
+        return <SuppliersPage />
       default:
         return (
           <div className="p-4">
