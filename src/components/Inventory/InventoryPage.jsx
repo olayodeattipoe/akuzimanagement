@@ -545,7 +545,7 @@ function ItemDetailsTable({ item, isBatchMode, onItemUpdate }) {
   if (!item) return null;
 
   return (
-    <div className="bg-white rounded-lg border shadow-sm">
+    <div className="bg-white rounded-lg border shadow-sm mx-4">
       <div className="px-6 py-4 border-b flex items-center justify-between bg-gray-50">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Item Details</h3>
@@ -628,14 +628,7 @@ function ItemDetailsTable({ item, isBatchMode, onItemUpdate }) {
                             <Edit className="h-4 w-4 mr-2 text-gray-500" />
                             Edit Quantities
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer hover:bg-gray-50">
-                            <Filter className="h-4 w-4 mr-2 text-gray-500" />
-                            View History
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600 cursor-pointer hover:bg-red-50">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Item
-                          </DropdownMenuItem>
+        
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -1143,7 +1136,7 @@ function RelationshipsSection({ item, mode }) {
   return (
     <div className="mt-8 bg-white rounded-lg border shadow-sm">
       <div className="px-6 py-4 border-b bg-gray-50 flex justify-between items-center">
-        <div>
+        <div className="mx-4">
           <h3 className="text-lg font-semibold text-gray-900">Item Relationships</h3>
           <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-x-4">
             <span>Mode: <span className="font-medium">{mode}</span></span>
@@ -1594,7 +1587,7 @@ export default function InventoryPage() {
         {/* Main Content */}
         <div className="py-6">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="">
-            <div className="sticky top-[88px] z-40 bg-white py-4 mb-6 rounded-lg">
+            <div className="sticky top-[88px] z-20 bg-white py-4 mb-6 rounded-lg">
               <div className="flex items-center justify-between px-4 py-2">
                 <TabsList className="w-full flex bg-transparent p-0 justify-start">
                   {categories.map((category) => (
@@ -1686,7 +1679,7 @@ export default function InventoryPage() {
           {selectedItem && (
             <>
             <div className="mt-8">
-              <div className="sticky top-[144px] z-30 bg-white py-4 border-b">
+              <div className="sticky top-[144px] z-30 bg-white py-4 border-b mx-4">
                   <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Switch
