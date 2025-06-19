@@ -1,0 +1,5 @@
+
+
+VITE_API_URL= https://managementcalabash.com
+VITE_HOST_IP=localhost
+VITE_PORT=5178

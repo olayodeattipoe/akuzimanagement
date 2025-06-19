@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       host: env.VITE_HOST_IP,
+      
       port: parseInt(env.VITE_PORT)
     },
     resolve: {
