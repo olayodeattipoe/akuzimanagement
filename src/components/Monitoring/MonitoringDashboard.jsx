@@ -153,8 +153,8 @@ export default function MonitoringDashboard() {
 
       if (response.data.status === 'success') {
         // Update the order in the local state
-        setOrders(orders.map(order =>
-          order.uuid === orderUuid
+        setOrders(orders.map(order => 
+          order.uuid === orderUuid 
             ? { ...order, status: newStatus }
             : order
         ));
@@ -198,7 +198,7 @@ export default function MonitoringDashboard() {
         }
 
         const { items = [], repeatCount = 1 } = container;
-
+        
         const containerTotal = items.reduce((total, item) => {
           if (!item || !item.is_available) {
             return total;
@@ -235,7 +235,7 @@ export default function MonitoringDashboard() {
           }
           return total;
         }, 0);
-
+        
         return Number(grandTotal) + (Number(containerTotal) * (Number(repeatCount) || 1));
       }, 0);
     } catch (error) {
@@ -432,14 +432,14 @@ export default function MonitoringDashboard() {
                           <Badge className={order.status === 'completed' ? 'bg-emerald-500 text-emerald-50' :
                             order.status === 'unprocessed' ? 'bg-yellow-500 text-yellow-50' :
                               'bg-muted text-muted-foreground'}>
-                            {order.status}
-                          </Badge>
+                          {order.status}
+                        </Badge>
                         </TableCell>
                         <TableCell className="text-center capitalize">
                           {ORDER_TYPE_CHOICES[order.order_type] || order.order_type}
                         </TableCell>
                         <TableCell className="text-center">
-                          {new Date(order.timestamp).toLocaleString()}
+                        {new Date(order.timestamp).toLocaleString()}
                         </TableCell>
                         <TableCell className="text-center capitalize">
                           {order.server?.username || 'Unassigned'}
@@ -448,21 +448,21 @@ export default function MonitoringDashboard() {
                           {order.admin?.username || 'N/A'}
                         </TableCell>
                         <TableCell className="text-center">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" disabled={isUpdating}>
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setSelectedOrder(order);
-                                setIsModalOpen(true);
-                              }}>
-                                View Details
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedOrder(order);
+                              setIsModalOpen(true);
+                            }}>
+                              View Details
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))

@@ -371,7 +371,8 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
     purchase_quantity: "",
     purchase_number: "",
     currency: "GHS",
-    notes: ""
+    notes: "",
+    item_mode: "individual"
   });
 
   // Reset form when dialog closes
@@ -385,7 +386,8 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
         purchase_quantity: "",
         purchase_number: "",
         currency: "GHS",
-        notes: ""
+        notes: "",
+        item_mode: "individual"
       });
     }
   }, [open]);
@@ -465,12 +467,21 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
         setIsLoading(false);
         return;
       }
+      // For batch mode, always send purchase_quantity as 1
+      const purchaseQuantityValue = purchaseData.item_mode === 'batch' ? 1 : parseFloat(purchaseData.purchase_quantity);
+      // Prepare purchase_number value (allow 0)
+      const purchaseNumberValue =
+        purchaseData.purchase_number !== "" && !isNaN(Number(purchaseData.purchase_number))
+          ? parseInt(purchaseData.purchase_number)
+          : null;
       // Log the data being sent for debugging
       console.log("Sending purchase data:", {
         supplier_id: parseInt(purchaseData.supplier_id),
         item_type: purchaseData.item_type === 'transformable' ? 'products' : purchaseData.item_type,
         item_id: parseInt(purchaseData.item_id),
-        selectedItem
+        selectedItem,
+        purchase_number: purchaseNumberValue,
+        purchase_quantity: purchaseQuantityValue
       });
       const response = await axios.post(`${API_CONFIG.BASE_URL}/mcc_primaryLogic/editables/`, {
         action: "add_purchase",
@@ -479,8 +490,8 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
           item_type: purchaseData.item_type === 'transformable' ? 'product' : purchaseData.item_type,
           item_id: parseInt(purchaseData.item_id),
           unit_price: parseFloat(purchaseData.unit_price),
-          purchase_quantity: parseFloat(purchaseData.purchase_quantity),
-          purchase_number: purchaseData.purchase_number ? parseInt(purchaseData.purchase_number) : null,
+          purchase_quantity: purchaseQuantityValue,
+          purchase_number: purchaseNumberValue,
           currency: purchaseData.currency,
           notes: purchaseData.notes || "",
           item_name: selectedItem.name
@@ -573,7 +584,8 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                   setPurchaseData({
                     ...purchaseData, 
                     item_id: value,
-                    unit_price: selectedItem?.base_price?.toString() || ""
+                    unit_price: selectedItem?.base_price?.toString() || "",
+                    item_mode: selectedItem?.mode || "individual"
                   });
                 }}
                 required
@@ -667,39 +679,42 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
               />
             </div>
 
-            {/* Purchase Quantity */}
-            <div className="space-y-2">
-              <Label htmlFor="quantity" className="text-sm font-medium">
-                Quantity *
-              </Label>
-              <Input 
-                id="quantity"
-                type="number"
-                min="0"
-                step="0.01"
-                required
-                value={purchaseData.purchase_quantity}
-                onChange={(e) => setPurchaseData({...purchaseData, purchase_quantity: e.target.value})}
-                className="w-full"
-              />
-            </div>
+            {/* Purchase Quantity or Purchase Number (conditional) */}
+            {purchaseData.item_mode !== 'batch' && (
+              <div className="space-y-2">
+                <Label htmlFor="quantity" className="text-sm font-medium">
+                  Quantity *
+                </Label>
+                <Input 
+                  id="quantity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={purchaseData.purchase_quantity}
+                  onChange={(e) => setPurchaseData({...purchaseData, purchase_quantity: e.target.value})}
+                  className="w-full"
+                />
+              </div>
+            )}
+            {purchaseData.item_mode === 'batch' && (
+              <div className="space-y-2">
+                <Label htmlFor="purchaseNumber" className="text-sm font-medium">
+                  Purchase Number
+                </Label>
+                <Input 
+                  id="purchaseNumber"
+                  type="number"
+                  min="0"
+                  value={purchaseData.purchase_number}
+                  onChange={(e) => setPurchaseData({...purchaseData, purchase_number: e.target.value})}
+                  className="w-full"
+                />
+              </div>
+            )}
 
-            {/* Purchase Number (Optional) */}
-            <div className="space-y-2">
-              <Label htmlFor="purchaseNumber" className="text-sm font-medium">
-                Purchase Number
-              </Label>
-              <Input 
-                id="purchaseNumber"
-                type="number"
-                min="0"
-                value={purchaseData.purchase_number}
-                onChange={(e) => setPurchaseData({...purchaseData, purchase_number: e.target.value})}
-                className="w-full"
-              />
-            </div>
-
-            {/* Currency */}
+            {/* Notes and Currency fields are now hidden */}
+            {/*
             <div className="space-y-2">
               <Label htmlFor="currency" className="text-sm font-medium">
                 Currency *
@@ -719,8 +734,6 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Notes */}
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="notes" className="text-sm font-medium">
                 Notes
@@ -732,6 +745,7 @@ function AddPurchaseDialog({ open, onOpenChange, suppliers, onAddPurchase }) {
                 className="w-full"
               />
             </div>
+            */}
           </div>
 
           <div className="flex justify-end gap-2 mt-6 pt-4 border-t sticky bottom-0 bg-white">
